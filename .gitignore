@@ -1,0 +1,6 @@
+earthican-venv/
+data/
+__pycache__/
+*.pyc
+.env
+*.log

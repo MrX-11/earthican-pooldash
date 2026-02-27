@@ -1,0 +1,96 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>earthican.network — Pool Status</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin: 20px; }
+    .grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
+    .card { border:1px solid #ddd; border-radius:12px; padding:12px; }
+    .big { font-size:22px; font-weight:800; }
+    .muted { color:#666; font-size:12px; }
+    @media (max-width: 900px){ .grid{ grid-template-columns:repeat(2,1fr);} }
+  </style>
+</head>
+<body>
+  <h1>Pool Status</h1>
+
+  <div class="grid">
+    <div class="card">
+      <div>Live Hashrate (1m)</div>
+      <div class="big" id="hr1m">—</div>
+      <div class="muted">5m: <span id="hr5m">—</span> • 1h: <span id="hr1h">—</span></div>
+    </div>
+
+    <div class="card">
+      <div>Users / Workers</div>
+      <div class="big"><span id="users">—</span> / <span id="workers">—</span></div>
+      <div class="muted">Idle: <span id="idle">—</span> • Disc: <span id="disc">—</span></div>
+    </div>
+
+    <div class="card">
+      <div>Accepted / Rejected</div>
+      <div class="big"><span id="acc">—</span> / <span id="rej">—</span></div>
+      <div class="muted">Best share: <span id="best">—</span></div>
+    </div>
+
+    <div class="card">
+      <div>Uptime</div>
+      <div class="big" id="uptime">—</div>
+      <div class="muted">Last update: <span id="lastupd">—</span></div>
+    </div>
+  </div>
+
+<script>
+  function fmtTH(x){
+    if (x === null || x === undefined) return "—";
+    const n = Number(x);
+    if (!isFinite(n)) return String(x);
+    if (n >= 1000) return (n/1000).toFixed(2) + " PH/s";
+    if (n >= 1) return n.toFixed(2) + " TH/s";
+    return (n*1000).toFixed(2) + " GH/s";
+  }
+  function fmtInt(x){ return (x===null||x===undefined) ? "—" : String(x); }
+  function fmtUptime(sec){
+    sec = Number(sec||0);
+    const d = Math.floor(sec/86400); sec%=86400;
+    const h = Math.floor(sec/3600); sec%=3600;
+    const m = Math.floor(sec/60);
+    return (d?`${d}d `:"") + `${h}h ${m}m`;
+  }
+  function fmtAge(sec){
+    sec = Number(sec||0);
+    if (sec < 60) return `${sec}s ago`;
+    if (sec < 3600) return `${Math.floor(sec/60)}m ago`;
+    return `${Math.floor(sec/3600)}h ago`;
+  }
+
+  async function refresh(){
+    const snap = await fetch("/api/snapshot").then(r=>r.json());
+    const p = snap.pool || {};
+    const hr = (p.hashrate_ths || {});
+    const c  = (p.counts || {});
+    const s  = (p.shares || {});
+
+    document.getElementById("hr1m").textContent = fmtTH(hr["1m"]);
+    document.getElementById("hr5m").textContent = fmtTH(hr["5m"]);
+    document.getElementById("hr1h").textContent = fmtTH(hr["1h"]);
+
+    document.getElementById("users").textContent = fmtInt(c.users);
+    document.getElementById("workers").textContent = fmtInt(c.workers);
+    document.getElementById("idle").textContent = fmtInt(c.idle);
+    document.getElementById("disc").textContent = fmtInt(c.disconnected);
+
+    document.getElementById("acc").textContent = fmtInt(s.accepted);
+    document.getElementById("rej").textContent = fmtInt(s.rejected);
+    document.getElementById("best").textContent = fmtInt(s.bestshare);
+
+    document.getElementById("uptime").textContent = fmtUptime(p.runtime_sec);
+    document.getElementById("lastupd").textContent = fmtAge(p.lastupdate_age_sec);
+  }
+  refresh();
+  setInterval(refresh, 5000);
+</script>
+</body>
+</html>
