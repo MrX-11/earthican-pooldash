@@ -1,10 +1,9 @@
 from flask import Flask, jsonify, render_template
+import os
 import json
 
 app = Flask(__name__, template_folder="templates")
-
-SNAP_PATH = "/var/www/earthican/data/pool_snapshot.json"
-
+SNAP_PATH = os.getenv("EARTHICAN_SNAPSHOT_PATH", "/var/www/earthican/data/pool_snapshot.json")
 def load_snap():
     try:
         with open(SNAP_PATH, "r", encoding="utf-8") as f:
