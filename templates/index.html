@@ -1,72 +1,272 @@
 <!doctype html>
-<html>
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>earthican.network — Pool Status</title>
+
   <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin: 20px; }
-    .grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
-    .card { border:1px solid #ddd; border-radius:12px; padding:12px; }
-    .big { font-size:22px; font-weight:800; }
-    .muted { color:#666; font-size:12px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
-    th, td { padding: 8px; border-bottom: 1px solid #eee; text-align: left; }
-    .pill { display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; border:1px solid #ddd; }
-    .on { color:#0a7a0a; border-color:#bfe8bf; background:#f2fff2; }
-    .off { color:#b00020; border-color:#f3c0c7; background:#fff2f4; }
-    details > summary { cursor:pointer; }
-    .workerbox { margin: 8px 0 12px; padding: 10px; border: 1px dashed #ddd; border-radius: 10px; }
-    @media (max-width: 900px){ .grid{ grid-template-columns:repeat(2,1fr);} }
+    :root {
+      --bg: #0b0f14;
+      --panel: #0f1620;
+      --panel2: #0c131c;
+      --text: #e6edf3;
+      --muted: #9aa7b4;
+      --border: rgba(255,255,255,.08);
+      --shadow: 0 10px 24px rgba(0,0,0,.35);
+      --ok: #2ecc71;
+      --bad: #ff4d6d;
+      --accent: #6aa6ff;
+      --chip: rgba(255,255,255,.06);
+      --chipBorder: rgba(255,255,255,.10);
+      --link: #8bb7ff;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+
+    [data-theme="light"]{
+      --bg: #f6f8fb;
+      --panel: #ffffff;
+      --panel2: #ffffff;
+      --text: #0b1220;
+      --muted: #506070;
+      --border: rgba(0,0,0,.08);
+      --shadow: 0 10px 24px rgba(0,0,0,.10);
+      --ok: #1f8b4c;
+      --bad: #b00020;
+      --accent: #245cff;
+      --chip: rgba(0,0,0,.04);
+      --chipBorder: rgba(0,0,0,.08);
+      --link: #245cff;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+    }
+
+    a { color: var(--link); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 18px; }
+
+    .topbar {
+      display:flex; gap:12px; align-items:center; justify-content:space-between;
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: linear-gradient(180deg, var(--panel), var(--panel2));
+      box-shadow: var(--shadow);
+      position: sticky; top: 0; z-index: 10;
+      backdrop-filter: blur(8px);
+    }
+
+    .brand h1 { margin:0; font-size: 18px; letter-spacing:.2px; }
+    .brand .sub { color: var(--muted); font-size: 12px; margin-top:2px; }
+
+    .controls { display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end; }
+    .btn {
+      background: var(--chip);
+      border: 1px solid var(--chipBorder);
+      color: var(--text);
+      padding: 8px 10px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .btn:hover { border-color: rgba(255,255,255,.18); }
+    [data-theme="light"] .btn:hover { border-color: rgba(0,0,0,.18); }
+
+    .pill {
+      display:inline-flex; align-items:center; gap:6px;
+      padding: 4px 10px; border-radius: 999px;
+      background: var(--chip);
+      border: 1px solid var(--chipBorder);
+      font-size: 12px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .dot { width:8px; height:8px; border-radius:50%; background: var(--muted); }
+    .dot.ok { background: var(--ok); }
+    .dot.bad { background: var(--bad); }
+
+    .grid { display:grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
+    .card {
+      background: linear-gradient(180deg, var(--panel), var(--panel2));
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px;
+      box-shadow: var(--shadow);
+    }
+    .label { color: var(--muted); font-size: 12px; }
+    .big { font-size: 22px; font-weight: 850; margin-top: 4px; letter-spacing: .2px; }
+    .row { display:flex; justify-content:space-between; gap:10px; align-items:baseline; margin-top: 6px; }
+    .mono { font-family: var(--mono); }
+
+    .sectionTitle { margin: 18px 0 8px; display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    .sectionTitle h2 { margin: 0; font-size: 16px; }
+    .search {
+      width: 320px; max-width: 100%;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--text);
+      outline: none;
+    }
+    .search::placeholder { color: var(--muted); }
+
+    /* Desktop table */
+    table { width:100%; border-collapse: collapse; overflow: hidden; border-radius: 14px; border: 1px solid var(--border); }
+    thead th {
+      text-align:left; font-size: 12px; color: var(--muted);
+      background: var(--panel);
+      padding: 10px 12px;
+      position: sticky; top: 74px; /* under topbar */
+      z-index: 5;
+    }
+    tbody td { padding: 10px 12px; border-top: 1px solid var(--border); vertical-align: top; }
+    tbody tr:hover { background: rgba(255,255,255,.03); }
+    [data-theme="light"] tbody tr:hover { background: rgba(0,0,0,.03); }
+
+    details > summary { cursor: pointer; color: var(--link); list-style: none; }
+    details > summary::-webkit-details-marker { display:none; }
+    details[open] > summary { text-decoration: underline; }
+
+    .workerbox {
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 12px;
+      border: 1px dashed var(--border);
+      background: rgba(255,255,255,.02);
+    }
+    [data-theme="light"] .workerbox { background: rgba(0,0,0,.02); }
+
+    /* Mobile cards */
+    .mobileList { display:none; gap:10px; flex-direction: column; }
+    .mcard {
+      background: linear-gradient(180deg, var(--panel), var(--panel2));
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px;
+      box-shadow: var(--shadow);
+    }
+    .mrow { display:flex; justify-content:space-between; gap:12px; align-items:center; }
+    .mname { font-weight: 750; overflow:hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 68%; }
+    .mmeta { margin-top: 8px; display:grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .kv { padding: 8px 10px; border-radius: 12px; border: 1px solid var(--border); background: rgba(255,255,255,.02); }
+    [data-theme="light"] .kv { background: rgba(0,0,0,.02); }
+    .kv .k { color: var(--muted); font-size: 11px; }
+    .kv .v { margin-top: 2px; font-weight: 750; }
+
+    @media (max-width: 900px){
+      .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      thead th { top: 118px; } /* topbar taller on mobile */
+    }
+    @media (max-width: 720px){
+      table { display:none; }
+      .mobileList { display:flex; }
+      .controls { justify-content:flex-start; }
+      .brand h1 { font-size: 16px; }
+    }
   </style>
 </head>
+
 <body>
-  <h1>Pool Status</h1>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="brand">
+        <h1>earthican.network</h1>
+        <div class="sub">solo pool dashboard • live snapshot</div>
+      </div>
 
-  <div class="grid">
-    <div class="card">
-      <div>Live Hashrate (1m)</div>
-      <div class="big" id="hr1m">—</div>
-      <div class="muted">5m: <span id="hr5m">—</span> • 1h: <span id="hr1h">—</span></div>
+      <div class="controls">
+        <span class="pill" id="healthPill"><span class="dot" id="healthDot"></span><span id="healthText">loading…</span></span>
+        <button class="btn" id="themeBtn" type="button">Toggle theme</button>
+      </div>
     </div>
 
-    <div class="card">
-      <div>Users / Workers</div>
-      <div class="big"><span id="users">—</span> / <span id="workers">—</span></div>
-      <div class="muted">Idle: <span id="idle">—</span> • Disc: <span id="disc">—</span></div>
+    <div class="grid">
+      <div class="card">
+        <div class="label">Pool Hashrate (1m)</div>
+        <div class="big" id="hr1m">—</div>
+        <div class="row">
+          <div class="label">5m: <span class="mono" id="hr5m">—</span></div>
+          <div class="label">1h: <span class="mono" id="hr1h">—</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="label">Miners / Workers</div>
+        <div class="big"><span id="users">—</span> / <span id="workers">—</span></div>
+        <div class="row">
+          <div class="label">Idle: <span class="mono" id="idle">—</span></div>
+          <div class="label">Disc: <span class="mono" id="disc">—</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="label">Accepted / Rejected</div>
+        <div class="big"><span id="acc">—</span> / <span id="rej">—</span></div>
+        <div class="row">
+          <div class="label">Best: <span class="mono" id="best">—</span></div>
+          <div class="label">SPS(1m): <span class="mono" id="sps1m">—</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="label">Uptime / Last update</div>
+        <div class="big" id="uptime">—</div>
+        <div class="row">
+          <div class="label">Last: <span class="mono" id="lastupd">—</span></div>
+          <div class="label">Tip: <span class="mono" id="tsutc">—</span></div>
+        </div>
+      </div>
     </div>
 
-    <div class="card">
-      <div>Accepted / Rejected</div>
-      <div class="big"><span id="acc">—</span> / <span id="rej">—</span></div>
-      <div class="muted">Best share: <span id="best">—</span> • SPS(1m): <span id="sps1m">—</span></div>
+    <div class="sectionTitle">
+      <h2>Miners</h2>
+      <input class="search" id="search" placeholder="Search miner or worker…" autocomplete="off"/>
     </div>
 
-    <div class="card">
-      <div>Uptime</div>
-      <div class="big" id="uptime">—</div>
-      <div class="muted">Last update: <span id="lastupd">—</span></div>
-    </div>
+    <!-- Desktop table -->
+    <table>
+      <thead>
+        <tr>
+          <th>Miner</th>
+          <th>Hashrate (1m)</th>
+          <th>Workers</th>
+          <th>Last Share</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="minersBody"></tbody>
+    </table>
+
+    <!-- Mobile cards -->
+    <div class="mobileList" id="mobileList"></div>
   </div>
 
-  <h2 style="margin-top:18px;">Miners</h2>
-  <div class="muted">Click a miner to expand worker details.</div>
-  <table>
-    <thead>
-      <tr>
-        <th>Miner</th>
-        <th>Hashrate (1m)</th>
-        <th>Workers</th>
-        <th>Last Share</th>
-        <th>Status</th>
-      </tr>
-    </thead>
-    <tbody id="minersBody"></tbody>
-  </table>
-
 <script>
-  const UNITS = ["H/s","kH/s","MH/s","GH/s","TH/s","PH/s","EH/s"];
+  // Theme: dark by default, optional toggle persisted in localStorage
+  (function initTheme(){
+    const saved = localStorage.getItem("theme");
+    if (saved === "light" || saved === "dark") {
+      document.documentElement.setAttribute("data-theme", saved);
+    } else {
+      document.documentElement.setAttribute("data-theme", "dark");
+    }
+    document.getElementById("themeBtn").addEventListener("click", () => {
+      const cur = document.documentElement.getAttribute("data-theme") || "dark";
+      const next = cur === "dark" ? "light" : "dark";
+      document.documentElement.setAttribute("data-theme", next);
+      localStorage.setItem("theme", next);
+    });
+  })();
 
+  const UNITS = ["H/s","kH/s","MH/s","GH/s","TH/s","PH/s","EH/s"];
   function formatHashrate(hs){
     if (hs === null || hs === undefined) return "—";
     let v = Number(hs);
@@ -76,7 +276,6 @@
     let dec = (v >= 100) ? 0 : (v >= 10) ? 1 : 2;
     return `${v.toFixed(dec)} ${UNITS[i]}`;
   }
-
   function fmtInt(x){ return (x===null||x===undefined) ? "—" : String(x); }
 
   function fmtUptime(sec){
@@ -92,16 +291,12 @@
     if (!ts) return "—";
     const now = Math.floor(Date.now()/1000);
     let sec = Math.max(0, now - ts);
-    if (sec < 60) return `${sec}s ago`;
-    if (sec < 3600) return `${Math.floor(sec/60)}m ago`;
-    return `${Math.floor(sec/3600)}h ago`;
+    if (sec < 60) return `${sec}s`;
+    if (sec < 3600) return `${Math.floor(sec/60)}m`;
+    return `${Math.floor(sec/3600)}h`;
   }
 
-  function onlineBadge(isOnline){
-    return isOnline ? "<span class='pill on'>online</span>" : "<span class='pill off'>offline</span>";
-  }
-
-  // simple online heuristic for now: lastshare within 5 minutes
+  // 15-minute online window (900s) based on lastshare
   function isOnlineFromLastshare(ts){
     ts = Number(ts||0);
     if (!ts) return false;
@@ -109,86 +304,171 @@
     return (now - ts) <= 900;
   }
 
-  async function refresh(){
-    const snap = await fetch("/api/snapshot").then(r=>r.json());
+  function badge(isOnline){
+    return isOnline
+      ? `<span class="pill"><span class="dot ok"></span>online</span>`
+      : `<span class="pill"><span class="dot bad"></span>offline</span>`;
+  }
 
+  function workerRows(miner, workers){
+    const prefix = miner + ".";
+    return workers.map(w => {
+      const on = isOnlineFromLastshare(w.lastshare);
+      return `
+        <tr>
+          <td>${w.name.startsWith(prefix) ? w.name.slice(prefix.length) : w.name}</td>
+          <td>${formatHashrate(w.hashrate1m_hs)}</td>
+          <td>${fmtAgeFromTs(w.lastshare)}</td>
+          <td>${badge(on)}</td>
+        </tr>
+      `;
+    }).join("");
+  }
+
+  const els = {
+    hr1m: document.getElementById("hr1m"),
+    hr5m: document.getElementById("hr5m"),
+    hr1h: document.getElementById("hr1h"),
+    users: document.getElementById("users"),
+    workers: document.getElementById("workers"),
+    idle: document.getElementById("idle"),
+    disc: document.getElementById("disc"),
+    acc: document.getElementById("acc"),
+    rej: document.getElementById("rej"),
+    best: document.getElementById("best"),
+    sps1m: document.getElementById("sps1m"),
+    uptime: document.getElementById("uptime"),
+    lastupd: document.getElementById("lastupd"),
+    tsutc: document.getElementById("tsutc"),
+    healthDot: document.getElementById("healthDot"),
+    healthText: document.getElementById("healthText"),
+    minersBody: document.getElementById("minersBody"),
+    mobileList: document.getElementById("mobileList"),
+    search: document.getElementById("search"),
+  };
+
+  let lastSnap = null;
+
+  function render(snap){
+    lastSnap = snap;
     const p = snap.pool || {};
-    const hr = (p.hashrate_hs || {});
-    const c  = (p.counts || {});
-    const s  = (p.shares || {});
+    const hr = p.hashrate_hs || {};
+    const c = p.counts || {};
+    const s = p.shares || {};
 
-    document.getElementById("hr1m").textContent = formatHashrate(hr["1m"]);
-    document.getElementById("hr5m").textContent = formatHashrate(hr["5m"]);
-    document.getElementById("hr1h").textContent = formatHashrate(hr["1h"]);
+    els.hr1m.textContent = formatHashrate(hr["1m"]);
+    els.hr5m.textContent = formatHashrate(hr["5m"]);
+    els.hr1h.textContent = formatHashrate(hr["1h"]);
 
-    document.getElementById("users").textContent = fmtInt(c.users);
-    document.getElementById("workers").textContent = fmtInt(c.workers);
-    document.getElementById("idle").textContent = fmtInt(c.idle);
-    document.getElementById("disc").textContent = fmtInt(c.disconnected);
+    els.users.textContent = fmtInt(c.users);
+    els.workers.textContent = fmtInt(c.workers);
+    els.idle.textContent = fmtInt(c.idle);
+    els.disc.textContent = fmtInt(c.disconnected);
 
-    document.getElementById("acc").textContent = fmtInt(s.accepted);
-    document.getElementById("rej").textContent = fmtInt(s.rejected);
-    document.getElementById("best").textContent = fmtInt(s.bestshare);
-    document.getElementById("sps1m").textContent = (s.sps1m ?? "—");
+    els.acc.textContent = fmtInt(s.accepted);
+    els.rej.textContent = fmtInt(s.rejected);
+    els.best.textContent = fmtInt(s.bestshare);
+    els.sps1m.textContent = (s.sps1m ?? "—");
 
-    document.getElementById("uptime").textContent = fmtUptime(p.runtime_sec);
-    document.getElementById("lastupd").textContent = (p.lastupdate_age_sec !== undefined) ? `${p.lastupdate_age_sec}s ago` : "—";
+    els.uptime.textContent = fmtUptime(p.runtime_sec);
+    els.lastupd.textContent = p.lastupdate_ts ? (fmtAgeFromTs(p.lastupdate_ts) + " ago") : "—";
+    els.tsutc.textContent = snap.ts_utc ? snap.ts_utc.split("T")[1].slice(0,8) + "Z" : "—";
 
-    const miners = snap.miners || [];
-    const body = document.getElementById("minersBody");
-    body.innerHTML = "";
+    // Health indicator: green if lastupdate within 90s, else red
+    const ok = (typeof p.lastupdate_age_sec === "number")
+      ? (p.lastupdate_age_sec <= 90)
+      : (p.lastupdate_ts ? ((Math.floor(Date.now()/1000) - p.lastupdate_ts) <= 90) : false);
 
-    for (const m of miners) {
-      const minerOnline = isOnlineFromLastshare(m.lastshare);
+    els.healthDot.className = "dot " + (ok ? "ok" : "bad");
+    els.healthText.textContent = ok ? "live" : "stale";
+
+    const q = (els.search.value || "").trim().toLowerCase();
+    const miners = (snap.miners || []).filter(m => {
+      if (!q) return true;
+      if ((m.username || "").toLowerCase().includes(q)) return true;
+      return (m.workers_list || []).some(w => (w.name || "").toLowerCase().includes(q));
+    });
+
+    // Desktop table
+    els.minersBody.innerHTML = miners.map(m => {
       const workers = m.workers_list || [];
-      const workerOnlineCount = workers.filter(w => isOnlineFromLastshare(w.lastshare)).length;
+      const minerOnline = isOnlineFromLastshare(m.lastshare);
+      const onlineWorkers = workers.filter(w => isOnlineFromLastshare(w.lastshare)).length;
 
-      const tr = document.createElement("tr");
-
-      // Expandable worker list using <details>
-      const workerDetails = workers.length ? `
+      const details = workers.length ? `
         <details>
           <summary>${m.username}</summary>
           <div class="workerbox">
-            <div class="muted" style="margin-bottom:6px;">Workers</div>
+            <div class="label" style="margin-bottom:8px;">Workers</div>
             <table>
               <thead>
-                <tr>
-                  <th>Worker</th>
-                  <th>Hashrate (1m)</th>
-                  <th>Last Share</th>
-                  <th>Status</th>
-                </tr>
+                <tr><th>Worker</th><th>Hashrate (1m)</th><th>Last Share</th><th>Status</th></tr>
               </thead>
               <tbody>
-                ${workers.map(w => {
-                  const on = isOnlineFromLastshare(w.lastshare);
-                  return `
-                    <tr>
-                      <td>${w.name.replace(m.username + ".", "")}</td>
-                      <td>${formatHashrate(w.hashrate1m_hs)}</td>
-                      <td>${fmtAgeFromTs(w.lastshare)}</td>
-                      <td>${onlineBadge(on)}</td>
-                    </tr>
-                  `;
-                }).join("")}
+                ${workerRows(m.username, workers)}
               </tbody>
             </table>
           </div>
         </details>
       ` : m.username;
 
-      tr.innerHTML = `
-        <td>${workerDetails}</td>
-        <td>${formatHashrate(m.hashrate1m_hs)}</td>
-        <td>${workerOnlineCount}/${m.workers ?? workers.length ?? 0}</td>
-        <td>${fmtAgeFromTs(m.lastshare)}</td>
-        <td>${onlineBadge(minerOnline)}</td>
+      return `
+        <tr>
+          <td>${details}</td>
+          <td class="mono">${formatHashrate(m.hashrate1m_hs)}</td>
+          <td class="mono">${onlineWorkers}/${m.workers ?? workers.length ?? 0}</td>
+          <td class="mono">${fmtAgeFromTs(m.lastshare)} ago</td>
+          <td>${badge(minerOnline)}</td>
+        </tr>
       `;
+    }).join("");
 
-      body.appendChild(tr);
+    // Mobile cards
+    els.mobileList.innerHTML = miners.map(m => {
+      const workers = m.workers_list || [];
+      const minerOnline = isOnlineFromLastshare(m.lastshare);
+      const onlineWorkers = workers.filter(w => isOnlineFromLastshare(w.lastshare)).length;
+
+      return `
+        <div class="mcard">
+          <div class="mrow">
+            <div class="mname">${m.username}</div>
+            <div>${badge(minerOnline)}</div>
+          </div>
+          <div class="mmeta">
+            <div class="kv"><div class="k">Hashrate (1m)</div><div class="v mono">${formatHashrate(m.hashrate1m_hs)}</div></div>
+            <div class="kv"><div class="k">Workers</div><div class="v mono">${onlineWorkers}/${m.workers ?? workers.length ?? 0}</div></div>
+            <div class="kv"><div class="k">Last share</div><div class="v mono">${fmtAgeFromTs(m.lastshare)} ago</div></div>
+            <div class="kv"><div class="k">Best share</div><div class="v mono">${m.bestshare ? Math.floor(m.bestshare).toString() : "—"}</div></div>
+          </div>
+
+          ${workers.length ? `
+            <details style="margin-top:10px;">
+              <summary>Workers</summary>
+              <div class="workerbox">
+                <table>
+                  <thead><tr><th>Worker</th><th>Hashrate</th><th>Last</th><th>Status</th></tr></thead>
+                  <tbody>${workerRows(m.username, workers)}</tbody>
+                </table>
+              </div>
+            </details>
+          ` : ``}
+        </div>
+      `;
+    }).join("");
+  }
+
+  async function refresh(){
+    try {
+      const snap = await fetch("/api/snapshot", { cache: "no-store" }).then(r => r.json());
+      render(snap);
+    } catch (e) {
+      els.healthDot.className = "dot bad";
+      els.healthText.textContent = "error";
     }
   }
+
+  els.search.addEventListener("input", () => { if (lastSnap) render(lastSnap); });
 
   refresh();
   setInterval(refresh, 5000);
