@@ -10,6 +10,13 @@
     .card { border:1px solid #ddd; border-radius:12px; padding:12px; }
     .big { font-size:22px; font-weight:800; }
     .muted { color:#666; font-size:12px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+    th, td { padding: 8px; border-bottom: 1px solid #eee; text-align: left; }
+    .pill { display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; border:1px solid #ddd; }
+    .on { color:#0a7a0a; border-color:#bfe8bf; background:#f2fff2; }
+    .off { color:#b00020; border-color:#f3c0c7; background:#fff2f4; }
+    details > summary { cursor:pointer; }
+    .workerbox { margin: 8px 0 12px; padding: 10px; border: 1px dashed #ddd; border-radius: 10px; }
     @media (max-width: 900px){ .grid{ grid-template-columns:repeat(2,1fr);} }
   </style>
 </head>
@@ -32,7 +39,7 @@
     <div class="card">
       <div>Accepted / Rejected</div>
       <div class="big"><span id="acc">—</span> / <span id="rej">—</span></div>
-      <div class="muted">Best share: <span id="best">—</span></div>
+      <div class="muted">Best share: <span id="best">—</span> • SPS(1m): <span id="sps1m">—</span></div>
     </div>
 
     <div class="card">
@@ -42,16 +49,36 @@
     </div>
   </div>
 
+  <h2 style="margin-top:18px;">Miners</h2>
+  <div class="muted">Click a miner to expand worker details.</div>
+  <table>
+    <thead>
+      <tr>
+        <th>Miner</th>
+        <th>Hashrate (1m)</th>
+        <th>Workers</th>
+        <th>Last Share</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody id="minersBody"></tbody>
+  </table>
+
 <script>
-  function fmtTH(x){
-    if (x === null || x === undefined) return "—";
-    const n = Number(x);
-    if (!isFinite(n)) return String(x);
-    if (n >= 1000) return (n/1000).toFixed(2) + " PH/s";
-    if (n >= 1) return n.toFixed(2) + " TH/s";
-    return (n*1000).toFixed(2) + " GH/s";
+  const UNITS = ["H/s","kH/s","MH/s","GH/s","TH/s","PH/s","EH/s"];
+
+  function formatHashrate(hs){
+    if (hs === null || hs === undefined) return "—";
+    let v = Number(hs);
+    if (!isFinite(v)) return "—";
+    let i = 0;
+    while (v >= 1000 && i < UNITS.length - 1) { v /= 1000; i++; }
+    let dec = (v >= 100) ? 0 : (v >= 10) ? 1 : 2;
+    return `${v.toFixed(dec)} ${UNITS[i]}`;
   }
+
   function fmtInt(x){ return (x===null||x===undefined) ? "—" : String(x); }
+
   function fmtUptime(sec){
     sec = Number(sec||0);
     const d = Math.floor(sec/86400); sec%=86400;
@@ -59,23 +86,40 @@
     const m = Math.floor(sec/60);
     return (d?`${d}d `:"") + `${h}h ${m}m`;
   }
-  function fmtAge(sec){
-    sec = Number(sec||0);
+
+  function fmtAgeFromTs(ts){
+    ts = Number(ts||0);
+    if (!ts) return "—";
+    const now = Math.floor(Date.now()/1000);
+    let sec = Math.max(0, now - ts);
     if (sec < 60) return `${sec}s ago`;
     if (sec < 3600) return `${Math.floor(sec/60)}m ago`;
     return `${Math.floor(sec/3600)}h ago`;
   }
 
+  function onlineBadge(isOnline){
+    return isOnline ? "<span class='pill on'>online</span>" : "<span class='pill off'>offline</span>";
+  }
+
+  // simple online heuristic for now: lastshare within 5 minutes
+  function isOnlineFromLastshare(ts){
+    ts = Number(ts||0);
+    if (!ts) return false;
+    const now = Math.floor(Date.now()/1000);
+    return (now - ts) <= 300;
+  }
+
   async function refresh(){
     const snap = await fetch("/api/snapshot").then(r=>r.json());
+
     const p = snap.pool || {};
-    const hr = (p.hashrate_ths || {});
+    const hr = (p.hashrate_hs || {});
     const c  = (p.counts || {});
     const s  = (p.shares || {});
 
-    document.getElementById("hr1m").textContent = fmtTH(hr["1m"]);
-    document.getElementById("hr5m").textContent = fmtTH(hr["5m"]);
-    document.getElementById("hr1h").textContent = fmtTH(hr["1h"]);
+    document.getElementById("hr1m").textContent = formatHashrate(hr["1m"]);
+    document.getElementById("hr5m").textContent = formatHashrate(hr["5m"]);
+    document.getElementById("hr1h").textContent = formatHashrate(hr["1h"]);
 
     document.getElementById("users").textContent = fmtInt(c.users);
     document.getElementById("workers").textContent = fmtInt(c.workers);
@@ -85,10 +129,67 @@
     document.getElementById("acc").textContent = fmtInt(s.accepted);
     document.getElementById("rej").textContent = fmtInt(s.rejected);
     document.getElementById("best").textContent = fmtInt(s.bestshare);
+    document.getElementById("sps1m").textContent = (s.sps1m ?? "—");
 
     document.getElementById("uptime").textContent = fmtUptime(p.runtime_sec);
-    document.getElementById("lastupd").textContent = fmtAge(p.lastupdate_age_sec);
+    document.getElementById("lastupd").textContent = (p.lastupdate_age_sec !== undefined) ? `${p.lastupdate_age_sec}s ago` : "—";
+
+    const miners = snap.miners || [];
+    const body = document.getElementById("minersBody");
+    body.innerHTML = "";
+
+    for (const m of miners) {
+      const minerOnline = isOnlineFromLastshare(m.lastshare);
+      const workers = m.workers_list || [];
+      const workerOnlineCount = workers.filter(w => isOnlineFromLastshare(w.lastshare)).length;
+
+      const tr = document.createElement("tr");
+
+      // Expandable worker list using <details>
+      const workerDetails = workers.length ? `
+        <details>
+          <summary>${m.username}</summary>
+          <div class="workerbox">
+            <div class="muted" style="margin-bottom:6px;">Workers</div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Worker</th>
+                  <th>Hashrate (1m)</th>
+                  <th>Last Share</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${workers.map(w => {
+                  const on = isOnlineFromLastshare(w.lastshare);
+                  return `
+                    <tr>
+                      <td>${w.name.replace(m.username + ".", "")}</td>
+                      <td>${formatHashrate(w.hashrate1m_hs)}</td>
+                      <td>${fmtAgeFromTs(w.lastshare)}</td>
+                      <td>${onlineBadge(on)}</td>
+                    </tr>
+                  `;
+                }).join("")}
+              </tbody>
+            </table>
+          </div>
+        </details>
+      ` : m.username;
+
+      tr.innerHTML = `
+        <td>${workerDetails}</td>
+        <td>${formatHashrate(m.hashrate1m_hs)}</td>
+        <td>${workerOnlineCount}/${m.workers ?? workers.length ?? 0}</td>
+        <td>${fmtAgeFromTs(m.lastshare)}</td>
+        <td>${onlineBadge(minerOnline)}</td>
+      `;
+
+      body.appendChild(tr);
+    }
   }
+
   refresh();
   setInterval(refresh, 5000);
 </script>
