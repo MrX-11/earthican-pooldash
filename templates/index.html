@@ -383,14 +383,18 @@
     els.healthText.textContent = ok ? "live" : "stale";
 
     const q = (els.search.value || "").trim().toLowerCase();
-    let miners = (snap.miners || []).filter(m => {
-      if (!q) return true;
-      if ((m.username || "").toLowerCase().includes(q)) return true;
-      return (m.workers_list || []).some(w => (w.name || "").toLowerCase().includes(q));
-    });
+
+    let miners = (snap.miners || []);
 
     // Default view: top 10 miners by hashrate (snapshot is already sorted)
-    if (!q) miners = miners.slice(0, 10);
+    if (!q) {
+      miners = miners.slice(0, 10);
+    } else {
+      miners = miners.filter(m => {
+        if ((m.username || "").toLowerCase().includes(q)) return true;
+        return (m.workers_list || []).some(w => (w.name || "").toLowerCase().includes(q));
+      });
+    }
 
     // Desktop table
     els.minersBody.innerHTML = miners.map(m => {
