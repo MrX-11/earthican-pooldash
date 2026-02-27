@@ -191,17 +191,7 @@
       .brand h1 { font-size: 16px; }
     }
   
-    /* --- visibility overrides: ensure miners always visible --- */
-    .mobileList { display: flex !important; }
-
-    @media (max-width: 720px){
-      table { display: none !important; }
-    }
-    @media (min-width: 721px){
-      table { display: table !important; }
-    }
-
-</style>
+    </style>
 </head>
 
 <body>
@@ -349,20 +339,32 @@
       : `<span class="pill"><span class="dot bad"></span>offline</span>`;
   }
 
-  function workerRows(miner, workers){
-    const prefix = miner + ".";
-    return workers.map(w => {
+  function workerPanelHTML(minerUsername, workers){
+    if (!workers || !workers.length) return "";
+    const prefix = minerUsername + ".";
+    const rows = workers.map(w => {
       const on = isOnlineFromLastshare(w.lastshare);
+      const short = (w.name || "").startsWith(prefix) ? w.name.slice(prefix.length) : (w.name || "");
       return `
-        <tr>
-          <td>${w.name.startsWith(prefix) ? w.name.slice(prefix.length) : w.name}</td>
-          <td>${formatHashrate(w.hashrate1m_hs)}</td>
-          <td>${fmtAgeFromTs(w.lastshare)}</td>
-          <td>${badge(on)}</td>
-        </tr>
+        <div class="workerRow">
+          <div class="wname">${short}</div>
+          <div class="wcell">${formatHashrate(w.hashrate1m_hs)}</div>
+          <div class="wcell">${fmtAgeFromTs(w.lastshare)} ago</div>
+          <div class="wstatus">${badge(on)}</div>
+        </div>
       `;
     }).join("");
+
+    return `
+      <div class="workerPanel">
+        <div class="label">Workers</div>
+        <div class="workerList">
+          ${rows}
+        </div>
+      </div>
+    `;
   }
+
 
   const els = {
     hr1m: document.getElementById("hr1m"),
@@ -387,6 +389,19 @@
   };
 
   let lastSnap = null;
+
+// Persist expanded miners so Workers doesn't auto-collapse on refresh
+    const expandedMiners = new Set(); // usernames
+
+    function toggleMiner(username){
+      if (expandedMiners.has(username)) expandedMiners.delete(username);
+      else expandedMiners.add(username);
+      if (lastSnap) render(lastSnap);
+    }
+
+    function escAttr(s){
+      return String(s ?? "").replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+    }
 
   function render(snap){
     lastSnap = snap;
@@ -441,26 +456,32 @@
       const minerOnline = isOnlineFromLastshare(m.lastshare);
       const onlineWorkers = workers.filter(w => isOnlineFromLastshare(w.lastshare)).length;
 
-      const details = workers.length ? `
-        <details>
-          <summary>${m.username}</summary>
-          <div class="workerbox">
-            <div class="label" style="margin-bottom:8px;">Workers</div>
-            <table>
-              <thead>
-                <tr><th>Worker</th><th>Hashrate (1m)</th><th>Last Share</th><th>Status</th></tr>
-              </thead>
-              <tbody>
-                ${workerRows(m.username, workers)}
-              </tbody>
-            </table>
+      const isOpen = expandedMiners.has(m.username);
+      const chev = isOpen ? "▾" : "▸";
+
+      const workersBtn = workers.length ? `
+        <button class="workerToggle" type="button" onclick="toggleMiner('${escAttr(m.username)}')">
+          <span class="workerChevron">${chev}</span>
+          Workers <span class="mono">${onlineWorkers}/${m.workers ?? workers.length}</span>
+        </button>
+      ` : `<span class="pill"><span class="dot bad"></span>no workers</span>`;
+
+      const minerCell = `
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <div style="display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap;">
+            <div style="font-weight:800; overflow:hidden; text-overflow:ellipsis;">${m.username}</div>
+            <div style="display:flex; gap:8px; align-items:center;">
+              ${workersBtn}
+              ${badge(minerOnline)}
+            </div>
           </div>
-        </details>
-      ` : m.username;
+          ${isOpen ? workerPanelHTML(m.username, workers) : ""}
+        </div>
+      `;
 
       return `
         <tr>
-          <td>${details}</td>
+          <td>${minerCell}</td>
           <td class="mono">${formatHashrate(m.hashrate1m_hs)}</td>
           <td class="mono">${onlineWorkers}/${m.workers ?? workers.length ?? 0}</td>
           <td class="mono">${fmtAgeFromTs(m.lastshare)} ago</td>
@@ -468,12 +489,14 @@
         </tr>
       `;
     }).join("");
-
-    // Mobile cards
+// Mobile cards
     els.mobileList.innerHTML = miners.map(m => {
       const workers = m.workers_list || [];
       const minerOnline = isOnlineFromLastshare(m.lastshare);
       const onlineWorkers = workers.filter(w => isOnlineFromLastshare(w.lastshare)).length;
+
+      const isOpen = expandedMiners.has(m.username);
+      const chev = isOpen ? "▾" : "▸";
 
       return `
         <div class="mcard">
@@ -489,20 +512,18 @@
           </div>
 
           ${workers.length ? `
-            <details style="margin-top:10px;">
-              <summary>Workers</summary>
-              <div class="workerbox">
-                <table>
-                  <thead><tr><th>Worker</th><th>Hashrate</th><th>Last</th><th>Status</th></tr></thead>
-                  <tbody>${workerRows(m.username, workers)}</tbody>
-                </table>
-              </div>
-            </details>
+            <div style="margin-top:10px;">
+              <button class="workerToggle" type="button" onclick="toggleMiner('${escAttr(m.username)}')">
+                <span class="workerChevron">${chev}</span>
+                Workers <span class="mono">${onlineWorkers}/${m.workers ?? workers.length}</span>
+              </button>
+              ${isOpen ? workerPanelHTML(m.username, workers) : ""}
+            </div>
           ` : ``}
         </div>
       `;
     }).join("");
-  }
+}
 
   async function refresh(){
     try {
