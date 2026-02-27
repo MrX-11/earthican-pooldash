@@ -106,7 +106,7 @@
     ts = Number(ts||0);
     if (!ts) return false;
     const now = Math.floor(Date.now()/1000);
-    return (now - ts) <= 300;
+    return (now - ts) <= 900;
   }
 
   async function refresh(){
