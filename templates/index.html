@@ -79,6 +79,25 @@
     .btn:hover { border-color: rgba(255,255,255,.18); }
     [data-theme="light"] .btn:hover { border-color: rgba(0,0,0,.18); }
 
+    .iconbtn{
+      width: 38px;
+      height: 38px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 12px;
+      background: var(--chip);
+      border: 1px solid var(--chipBorder);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 16px;
+      line-height: 1;
+    }
+    .iconbtn:hover { border-color: rgba(255,255,255,.18); }
+    [data-theme="light"] .iconbtn:hover { border-color: rgba(0,0,0,.18); }
+
+    [data-theme="light"] .btn:hover { border-color: rgba(0,0,0,.18); }
+
     .pill {
       display:inline-flex; align-items:center; gap:6px;
       padding: 4px 10px; border-radius: 999px;
@@ -184,7 +203,7 @@
 
       <div class="controls">
         <span class="pill" id="healthPill"><span class="dot" id="healthDot"></span><span id="healthText">loading…</span></span>
-        <button class="btn" id="themeBtn" type="button">Toggle theme</button>
+        <button class="iconbtn" id="themeBtn" type="button" aria-label="Toggle theme" title="Toggle theme">  <span id="themeIcon" aria-hidden="true">🌙</span></button>
       </div>
     </div>
 
@@ -252,16 +271,25 @@
 <script>
   // Theme: dark by default, optional toggle persisted in localStorage
   (function initTheme(){
+    function setThemeIcon(theme){
+      const el = document.getElementById("themeIcon");
+      if (!el) return;
+      el.textContent = (theme === "dark") ? "🌙" : "☀️";
+    }
+
     const saved = localStorage.getItem("theme");
     if (saved === "light" || saved === "dark") {
       document.documentElement.setAttribute("data-theme", saved);
+      setThemeIcon(saved);
     } else {
       document.documentElement.setAttribute("data-theme", "dark");
+      setThemeIcon("dark");
     }
     document.getElementById("themeBtn").addEventListener("click", () => {
       const cur = document.documentElement.getAttribute("data-theme") || "dark";
       const next = cur === "dark" ? "light" : "dark";
       document.documentElement.setAttribute("data-theme", next);
+      setThemeIcon(next);
       localStorage.setItem("theme", next);
     });
   })();
