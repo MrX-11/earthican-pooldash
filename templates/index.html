@@ -190,7 +190,18 @@
       .controls { justify-content:flex-start; }
       .brand h1 { font-size: 16px; }
     }
-  </style>
+  
+    /* --- visibility overrides: ensure miners always visible --- */
+    .mobileList { display: flex !important; }
+
+    @media (max-width: 720px){
+      table { display: none !important; }
+    }
+    @media (min-width: 721px){
+      table { display: table !important; }
+    }
+
+</style>
 </head>
 
 <body>
