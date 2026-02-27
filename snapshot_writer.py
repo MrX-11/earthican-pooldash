@@ -6,8 +6,6 @@ from datetime import datetime, timezone
 CKPOOL_LOG = os.getenv("CKPOOL_LOG_PATH", "/home/misterx/ckpool/logs/ckpool.log")
 OUT_JSON  = os.getenv("EARTHICAN_OUT_JSON", "/var/www/earthican/data/pool_snapshot.json")
 
-CKPOOL_LOG = os.getenv("CKPOOL_LOG_PATH", "/home/misterx/ckpool/logs/ckpool.log")
-OUT_JSON = os.getenv("EARTHICAN_OUT_JSON", "/var/www/earthican/data/pool_snapshot.json")
 POOL_RE   = re.compile(r'^\[[^\]]+\]\s+Pool:(\{.*\})\s*$')
 WORKER_RE = re.compile(r'^\[[^\]]+\]\s+Worker\s+(\S+)\s+(\{.*\})\s*$')
 USER_RE   = re.compile(r'^\[[^\]]+\]\s+User\s+([^:]+):(\{.*\})\s*$')
