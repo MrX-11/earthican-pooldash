@@ -546,5 +546,149 @@
   refresh();
   setInterval(refresh, 5000);
 </script>
+
+  <div id="game-servers">
+    <div class="section-title">Game Servers</div>
+
+    <div class="grid">
+      <!-- Minecraft -->
+      <div class="card" id="mc-card">
+        <div class="card-header">
+          <div class="card-title">
+            <span class="status-dot dot-gray" id="mc-dot"></span>
+            <span>Minecraft (PaperMC)</span>
+            <span class="pill mono" id="mc-lat">-- ms</span>
+          </div>
+          <button class="btn" type="button" data-toggle="mc-flyout">Details</button>
+        </div>
+
+        <div class="row">
+          <div class="sub">Players</div>
+          <div class="mono" id="mc-players">--/--</div>
+        </div>
+        <div class="row">
+          <div class="sub">Version</div>
+          <div class="mono right" id="mc-version">--</div>
+        </div>
+
+        <div class="flyout" id="mc-flyout">
+          <div class="row">
+            <div class="sub">Host:Port</div>
+            <div class="mono right" id="mc-hostport">--</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ARK ASA -->
+      <div class="card" id="asa-card">
+        <div class="card-header">
+          <div class="card-title">
+            <span class="status-dot dot-gray" id="asa-dot"></span>
+            <span>ARK: Survival Ascended (Cluster)</span>
+            <span class="pill mono" id="asa-total">-- players</span>
+          </div>
+          <button class="btn" type="button" data-toggle="asa-flyout">Details</button>
+        </div>
+
+        <div class="row">
+          <div class="sub">Instances Online</div>
+          <div class="mono" id="asa-online">--/--</div>
+        </div>
+        <div class="row">
+          <div class="sub">Total Players</div>
+          <div class="mono right" id="asa-players">--</div>
+        </div>
+
+        <div class="flyout" id="asa-flyout">
+          <div class="sub" style="margin: 6px 0 8px;">Per-map</div>
+          <div id="asa-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Flyout toggle
+    document.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-toggle]");
+      if (!btn) return;
+      const id = btn.getAttribute("data-toggle");
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.toggle("open");
+    });
+
+    function setDot(dotEl, state) {
+      dotEl.classList.remove("dot-green","dot-red","dot-gray");
+      if (state === "green") dotEl.classList.add("dot-green");
+      else if (state === "red") dotEl.classList.add("dot-red");
+      else dotEl.classList.add("dot-gray");
+    }
+
+    function safeText(id, val) {
+      const el = document.getElementById(id);
+      if (el) el.textContent = (val === null || val === undefined || val === "") ? "--" : String(val);
+    }
+
+    function fmtMs(ms) {
+      if (ms === null || ms === undefined) return "-- ms";
+      return `${Math.round(ms * 10) / 10} ms`;
+    }
+
+    async function loadServerStatus() {
+      try {
+        const r = await fetch("/api/server_status", { cache: "no-store" });
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const data = await r.json();
+
+        // Minecraft
+        const mc = data.minecraft || {};
+        setDot(document.getElementById("mc-dot"), mc.online ? "green" : "red");
+        safeText("mc-players", `${mc.players_online ?? "--"}/${mc.players_max ?? "--"}`);
+        safeText("mc-version", mc.version ?? "--");
+        safeText("mc-lat", fmtMs(mc.latency_ms));
+        safeText("mc-hostport", `${mc.host ?? "--"}:${mc.port ?? "--"}`);
+
+        // ASA
+        const asa = data.ark_asa || {};
+        const online = asa.online_instances ?? 0;
+        const total = asa.total_instances ?? (asa.instances ? asa.instances.length : 0);
+        const totalPlayers = asa.total_players ?? 0;
+
+        setDot(document.getElementById("asa-dot"), online > 0 ? "green" : "red");
+        safeText("asa-online", `${online}/${total}`);
+        safeText("asa-players", totalPlayers);
+        safeText("asa-total", `${totalPlayers} players`);
+
+        // Per-map list
+        const list = document.getElementById("asa-list");
+        if (list) {
+          list.innerHTML = "";
+          (asa.instances || []).forEach(inst => {
+            const row = document.createElement("div");
+            row.className = "row";
+            const left = document.createElement("div");
+            left.innerHTML = `<span class="mono">${inst.name || "?"}</span> <span class="sub">:${inst.game_port ?? "--"}</span>`;
+            const right = document.createElement("div");
+            const players = inst.players_online ?? 0;
+            const lat = inst.latency_ms ?? null;
+            right.className = "mono right";
+            right.textContent = inst.online ? `${players}  (${fmtMs(lat)})` : "offline";
+            row.appendChild(left);
+            row.appendChild(right);
+            list.appendChild(row);
+          });
+        }
+      } catch (e) {
+        // If fetch fails, set to unknown
+        setDot(document.getElementById("mc-dot"), "gray");
+        setDot(document.getElementById("asa-dot"), "gray");
+      }
+    }
+
+    // Initial + poll
+    loadServerStatus();
+    setInterval(loadServerStatus, 10000);
+  </script>
 </body>
 </html>
