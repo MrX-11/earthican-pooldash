@@ -411,6 +411,7 @@
 
       <div class="gs-row"><div class="gs-sub">Instances Online</div><div class="gs-mono right" id="asa-online">--/--</div></div>
       <div class="gs-row"><div class="gs-sub">Total Players</div><div class="gs-mono right" id="asa-players">--</div></div>
+      <div class="gs-row"><div class="gs-sub">MOTD</div><div class="gs-mono right" id="asa-motd">--</div></div>
 
       <div class="gs-flyout" id="asa-flyout">
         <div class="gs-sub" style="margin: 6px 0 8px;">Per-map</div>
@@ -752,6 +753,15 @@ function gsSetDot(el, state){
       gsText("mc-lat", gsMs(mc.latency_ms));
 
       const asa = data.ark_asa || {};
+      // Pick one MOTD for the card: prefer TheIsland, else first non-empty
+      const insts = asa.instances || [];
+      const island = insts.find(x => (x.name || "").toLowerCase() === "theisland");
+      let motd = (island && island.motd) ? island.motd : "";
+      if (!motd) {
+        const first = insts.find(x => (x.motd || "").toString().trim().length);
+        motd = first ? first.motd : "";
+      }
+      gsText("asa-motd", (motd || "--").toString().slice(0, 120));
       const online = asa.online_instances ?? 0;
       const total = asa.total_instances ?? (asa.instances ? asa.instances.length : 0);
       const totalPlayers = asa.total_players ?? 0;
@@ -771,22 +781,7 @@ function gsSetDot(el, state){
           left.innerHTML = `<span class="gs-dot ${inst.online ? "gs-green" : "gs-red"}"></span> <span class="gs-mono">${inst.name || "?"}</span>`;
           const right = document.createElement("div");
           right.className = "gs-mono right";
-          if (inst.online) {
-            right.textContent = `${inst.players_online ?? 0} (${gsMs(inst.latency_ms ?? null)})`;
-            const motd = (inst.motd ?? "").toString().trim();
-            if (motd) {
-              const sub = document.createElement("div");
-              sub.className = "gs-sub";
-              sub.style.marginTop = "4px";
-              sub.style.whiteSpace = "normal";
-              sub.style.maxWidth = "520px";
-              sub.style.textAlign = "right";
-              sub.textContent = motd;
-              right.appendChild(sub);
-            }
-          } else {
-            right.textContent = "offline";
-          }
+          right.textContent = inst.online ? `${inst.players_online ?? 0} (${gsMs(inst.latency_ms ?? null)})` : "offline";
           row.appendChild(left);
           row.appendChild(right);
           list.appendChild(row);
