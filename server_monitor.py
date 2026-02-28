@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import time
 from typing import Any, Dict, List
+from asa_rcon import query_asa_rcon
 
 # ---- Config (local machine) ----
 MINECRAFT_HOST = "192.168.1.50"
@@ -93,3 +94,8 @@ def query_asa(host: str = ASA_HOST, instances: List[Dict[str, Any]] = ASA_INSTAN
         result["instances"].append(row)
 
     return result
+
+
+def query_asa(host: str = 'unused', instances=None, timeout: float = 2.0):
+    # RCON-based ASA status from Nebuchadnezzar (TCP)
+    return query_asa_rcon(timeout=timeout)
