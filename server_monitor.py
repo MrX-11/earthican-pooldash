@@ -37,6 +37,7 @@ def query_minecraft(host: str = MINECRAFT_HOST, port: int = MINECRAFT_PORT, time
             "players_online": int(getattr(status.players, "online", 0) or 0),
             "players_max": int(getattr(status.players, "max", 0) or 0),
             "version": getattr(status.version, "name", None),
+            "motd": getattr(getattr(status, "description", None), "to_plain", lambda: getattr(status, "description", None))(),
             "latency_ms": float(getattr(status, "latency", 0.0) or 0.0),
         })
     except Exception as e:
