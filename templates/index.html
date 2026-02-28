@@ -199,68 +199,105 @@
 
 </style>
 
+  
   <style id="game-server-styles">
-  /* Game Servers (namespaced to avoid colliding with mining CSS) */
-  #game-servers { margin-top: 22px; }
-  #game-servers .gs-title { margin: 18px 0 12px; font-size: 16px; font-weight: 800; color: var(--text); }
+    /* Game Servers module (namespaced; match mining card feel) */
+    #game-servers { margin-top: 22px; }
 
-  #game-servers .gs-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+    #game-servers .gs-title {
+      margin: 18px 0 10px;
+      font-size: 16px;
+      font-weight: 850;
+      letter-spacing: .2px;
+      color: var(--text);
+    }
 
-  #game-servers .gs-card {
-    background: linear-gradient(180deg, var(--panel), var(--panel2));
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    box-shadow: var(--shadow);
-    padding: 12px;
-    color: var(--text);
-  }
+    #game-servers .gs-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
 
-  #game-servers .gs-header { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom: 6px; }
-  #game-servers .gs-hleft { display:flex; align-items:center; gap:10px; font-weight: 800; color: var(--text); }
+    #game-servers .gs-card {
+      background: linear-gradient(180deg, var(--panel), var(--panel2));
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      padding: 12px;
+      color: var(--text);
+    }
 
-  #game-servers .gs-dot { width:10px; height:10px; border-radius:999px; display:inline-block; background: rgba(255,255,255,.25); }
-  #game-servers .gs-green { background: var(--ok); }
-  #game-servers .gs-red { background: var(--bad); }
-  #game-servers .gs-gray { background: rgba(255,255,255,.25); }
-  [data-theme="light"] #game-servers .gs-gray { background: rgba(0,0,0,.25); }
+    #game-servers .gs-header {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      margin-bottom: 8px;
+    }
 
-  #game-servers .gs-mono { font-family: var(--mono); }
-  #game-servers .gs-sub { color: var(--muted); font-size: 13px; }
+    #game-servers .gs-hleft {
+      display:flex;
+      align-items:center;
+      gap:10px;
+      font-weight: 850;
+      color: var(--text);
+      min-width: 0;
+    }
+    #game-servers .gs-hleft > span:nth-child(2){
+      overflow:hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
 
-  #game-servers .gs-row {
-    display:flex; justify-content:space-between; align-items:center; gap:12px;
-    padding: 7px 0;
-    border-top: 1px solid var(--border);
-  }
-  #game-servers .gs-row:first-child { border-top: none; }
+    #game-servers .gs-dot { width:10px; height:10px; border-radius:999px; display:inline-block; background: rgba(255,255,255,.25); }
+    #game-servers .gs-green { background: var(--ok); }
+    #game-servers .gs-red { background: var(--bad); }
+    #game-servers .gs-gray { background: rgba(255,255,255,.25); }
+    [data-theme="light"] #game-servers .gs-gray { background: rgba(0,0,0,.25); }
 
-  #game-servers .gs-btn {
-    border: 1px solid var(--chipBorder);
-    background: var(--chip);
-    color: var(--text);
-    padding: 6px 10px;
-    border-radius: 12px;
-    cursor: pointer;
-    font-weight: 800;
-  }
-  #game-servers .gs-btn:hover { border-color: rgba(255,255,255,.22); }
-  [data-theme="light"] #game-servers .gs-btn:hover { border-color: rgba(0,0,0,.18); }
+    #game-servers .gs-pill {
+      font-size: 12px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--chipBorder);
+      background: var(--chip);
+      color: var(--text);
+      font-weight: 800;
+      white-space: nowrap;
+    }
 
-  #game-servers .gs-flyout { margin-top: 10px; display: none; }
-  #game-servers .gs-flyout.open { display:block; }
+    #game-servers .gs-mono { font-family: var(--mono); }
+    #game-servers .gs-sub { color: var(--muted); font-size: 12px; }
 
-  #game-servers .gs-pill {
-    font-size: 12px;
-    padding: 3px 8px;
-    border-radius: 999px;
-    border: 1px solid var(--chipBorder);
-    background: var(--chip);
-    color: var(--text);
-    font-weight: 800;
-  }
+    #game-servers .gs-row {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      padding: 9px 0;
+      border-top: 1px solid var(--border);
+    }
+    #game-servers .gs-row:first-child { border-top: none; }
 
-  #game-servers .right { text-align:right; }
-</style>
+    #game-servers .gs-btn {
+      border: 1px solid var(--chipBorder);
+      background: var(--chip);
+      color: var(--text);
+      padding: 6px 10px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: 800;
+      font-size: 13px;
+    }
+    #game-servers .gs-btn:hover { border-color: rgba(255,255,255,.22); }
+    [data-theme="light"] #game-servers .gs-btn:hover { border-color: rgba(0,0,0,.18); }
+
+    #game-servers .gs-flyout {
+      margin-top: 10px;
+      padding-top: 6px;
+      border-top: 1px dashed var(--border);
+      display:none;
+    }
+    #game-servers .gs-flyout.open { display:block; }
+
+    #game-servers .right { text-align:right; }
+  </style>
 </head>
 
 <body>
@@ -336,12 +373,58 @@
 
     <!-- Mobile cards -->
     <div class="mobileList" id="mobileList"></div>
-  
 
 <div id="game-servers">
-    <div class="gs-title">Game Servers</div>
+  <div class="gs-title">Game Servers</div>
+
+  <div class="gs-grid">
+    <!-- Minecraft -->
+    <div class="gs-card" id="mc-card">
+      <div class="gs-header">
+        <div class="gs-hleft">
+          <span class="gs-dot gs-gray" id="mc-dot"></span>
+          <span>Minecraft (PaperMC)</span>
+          <span class="gs-pill gs-mono" id="mc-lat">-- ms</span>
+        </div>
+        <button class="gs-btn" type="button" data-toggle="mc-flyout">Details</button>
+      </div>
+
+      <div class="gs-row"><div class="gs-sub">Players</div><div class="gs-mono right" id="mc-players">--/--</div></div>
+      <div class="gs-row"><div class="gs-sub">Version</div><div class="gs-mono right" id="mc-version">--</div></div>
+      <div class="gs-row"><div class="gs-sub">MOTD</div><div class="gs-mono right" id="mc-motd">--</div></div>
+      <div class="gs-row"><div class="gs-sub">Updated</div><div class="gs-mono right" id="mc-updated">--</div></div>
+
+      <div class="gs-flyout" id="mc-flyout"></div>
+    </div>
+
+    <!-- ARK ASA -->
+    <div class="gs-card" id="asa-card">
+      <div class="gs-header">
+        <div class="gs-hleft">
+          <span class="gs-dot gs-gray" id="asa-dot"></span>
+          <span>ARK: Survival Ascended (Cluster)</span>
+          <span class="gs-pill gs-mono" id="asa-total">-- players</span>
+        </div>
+        <button class="gs-btn" type="button" data-toggle="asa-flyout">Details</button>
+      </div>
+
+      <div class="gs-row"><div class="gs-sub">Instances Online</div><div class="gs-mono right" id="asa-online">--/--</div></div>
+      <div class="gs-row"><div class="gs-sub">Total Players</div><div class="gs-mono right" id="asa-players">--</div></div>
+
+      <div class="gs-flyout" id="asa-flyout">
+        <div class="gs-sub" style="margin: 6px 0 8px;">Per-map</div>
+        <div id="asa-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
 
     
+
+
+
+  
+
 
 </div>
 
@@ -765,6 +848,85 @@
     loadServerStatus();
     setInterval(loadServerStatus, 10000);
   </script>
+
+
+
+<script>
+  // GAME_SERVERS
+  document.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-toggle]");
+    if (!btn) return;
+    const id = btn.getAttribute("data-toggle");
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle("open");
+  });
+
+  function gsSetDot(el, state){
+    if (!el) return;
+    el.classList.remove("gs-green","gs-red","gs-gray");
+    el.classList.add(state === "green" ? "gs-green" : state === "red" ? "gs-red" : "gs-gray");
+  }
+
+  function gsText(id, val){
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = (val === null || val === undefined || val === "") ? "--" : String(val);
+  }
+
+  function gsMs(ms){
+    if (ms === null || ms === undefined) return "-- ms";
+    return `${Math.round(ms * 10) / 10} ms`;
+  }
+
+  async function loadServerStatus(){
+    try{
+      const r = await fetch("/api/server_status", { cache: "no-store" });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const data = await r.json();
+
+      const mc = data.minecraft || {};
+      gsSetDot(document.getElementById("mc-dot"), mc.online ? "green" : "red");
+      gsText("mc-players", `${mc.players_online ?? "--"}/${mc.players_max ?? "--"}`);
+      gsText("mc-version", mc.version ?? "--");
+      gsText("mc-motd", (mc.motd ?? "--").toString().slice(0, 80));
+      gsText("mc-updated", "just now");
+      gsText("mc-lat", gsMs(mc.latency_ms));
+
+      const asa = data.ark_asa || {};
+      const online = asa.online_instances ?? 0;
+      const total = asa.total_instances ?? (asa.instances ? asa.instances.length : 0);
+      const totalPlayers = asa.total_players ?? 0;
+
+      gsSetDot(document.getElementById("asa-dot"), online > 0 ? "green" : "red");
+      gsText("asa-online", `${online}/${total}`);
+      gsText("asa-players", totalPlayers);
+      gsText("asa-total", `${totalPlayers} players`);
+
+      const list = document.getElementById("asa-list");
+      if (list){
+        list.innerHTML = "";
+        (asa.instances || []).forEach(inst => {
+          const row = document.createElement("div");
+          row.className = "gs-row";
+          const left = document.createElement("div");
+          left.innerHTML = `<span class="gs-dot ${inst.online ? "gs-green" : "gs-red"}"></span> <span class="gs-mono">${inst.name || "?"}</span>`;
+          const right = document.createElement("div");
+          right.className = "gs-mono right";
+          right.textContent = inst.online ? `${inst.players_online ?? 0}  (${gsMs(inst.latency_ms ?? null)})` : "offline";
+          row.appendChild(left);
+          row.appendChild(right);
+          list.appendChild(row);
+        });
+      }
+    }catch(e){
+      gsSetDot(document.getElementById("mc-dot"), "gray");
+      gsSetDot(document.getElementById("asa-dot"), "gray");
+    }
+  }
+
+  loadServerStatus();
+  setInterval(loadServerStatus, 10000);
+</script>
 
 </body>
 </html>
