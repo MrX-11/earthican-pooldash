@@ -275,6 +275,18 @@
     }
     #game-servers .gs-row:first-child { border-top: none; }
 
+    /* MOTD rows: 2-col layout so long text wraps cleanly */
+    #game-servers .gs-row.gs-motd {
+      display: grid;
+      grid-template-columns: 120px 1fr;
+      align-items: start;
+      gap: 12px;
+    }
+    #game-servers .gs-row.gs-motd .right {
+      text-align: left;
+      max-width: none;
+    }
+
     #game-servers .gs-btn {
       border: 1px solid var(--chipBorder);
       background: var(--chip);
@@ -297,6 +309,21 @@
     #game-servers .gs-flyout.open { display:block; }
 
     #game-servers .right { text-align:right; }
+
+    #game-servers .gs-wrap {
+      white-space: normal;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+      max-width: 620px;
+      line-height: 1.25;
+    }
+
+    #game-servers .gs-clamp3 {
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
   </style>
 </head>
 
@@ -392,7 +419,7 @@
 
       <div class="gs-row"><div class="gs-sub">Players</div><div class="gs-mono right" id="mc-players">--/--</div></div>
       <div class="gs-row"><div class="gs-sub">Version</div><div class="gs-mono right" id="mc-version">--</div></div>
-      <div class="gs-row"><div class="gs-sub">MOTD</div><div class="gs-mono right" id="mc-motd">--</div></div>
+      <div class="gs-row gs-motd"><div class="gs-sub">MOTD</div><div class="right gs-wrap" id="mc-motd">--</div></div>
       <div class="gs-row"><div class="gs-sub">Updated</div><div class="gs-mono right" id="mc-updated">--</div></div>
 
       <div class="gs-flyout" id="mc-flyout"></div>
@@ -411,7 +438,7 @@
 
       <div class="gs-row"><div class="gs-sub">Instances Online</div><div class="gs-mono right" id="asa-online">--/--</div></div>
       <div class="gs-row"><div class="gs-sub">Total Players</div><div class="gs-mono right" id="asa-players">--</div></div>
-      <div class="gs-row"><div class="gs-sub">MOTD</div><div class="gs-mono right" id="asa-motd">--</div></div>
+      <div class="gs-row gs-motd"><div class="gs-sub">MOTD</div><div class="right gs-wrap" id="asa-motd">--</div></div>
 
       <div class="gs-flyout" id="asa-flyout">
         <div class="gs-sub" style="margin: 6px 0 8px;">Per-map</div>
