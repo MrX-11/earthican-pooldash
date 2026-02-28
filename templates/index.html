@@ -283,7 +283,7 @@
       gap: 12px;
     }
     #game-servers .gs-row.gs-motd .right {
-      text-align: left;
+      text-align: right;
       max-width: none;
     }
 
@@ -420,7 +420,6 @@
       <div class="gs-row"><div class="gs-sub">Players</div><div class="gs-mono right" id="mc-players">--/--</div></div>
       <div class="gs-row"><div class="gs-sub">Version</div><div class="gs-mono right" id="mc-version">--</div></div>
       <div class="gs-row gs-motd"><div class="gs-sub">MOTD</div><div class="right gs-wrap" id="mc-motd">--</div></div>
-      <div class="gs-row"><div class="gs-sub">Updated</div><div class="gs-mono right" id="mc-updated">--</div></div>
 
       <div class="gs-flyout" id="mc-flyout"></div>
     </div>
@@ -776,7 +775,6 @@ function gsSetDot(el, state){
       gsText("mc-players", `${mc.players_online ?? "--"}/${mc.players_max ?? "--"}`);
       gsText("mc-version", mc.version ?? "--");
       gsText("mc-motd", (mc.motd ?? "--").toString().slice(0, 80));
-      gsText("mc-updated", "just now");
       gsText("mc-lat", gsMs(mc.latency_ms));
 
       const asa = data.ark_asa || {};
@@ -788,7 +786,7 @@ function gsSetDot(el, state){
         const first = insts.find(x => (x.motd || "").toString().trim().length);
         motd = first ? first.motd : "";
       }
-      gsText("asa-motd", (motd || "--").toString().slice(0, 120));
+      gsText("asa-motd", (motd || "--").toString());
       const online = asa.online_instances ?? 0;
       const total = asa.total_instances ?? (asa.instances ? asa.instances.length : 0);
       const totalPlayers = asa.total_players ?? 0;
@@ -805,7 +803,9 @@ function gsSetDot(el, state){
           const row = document.createElement("div");
           row.className = "gs-row";
           const left = document.createElement("div");
-          left.innerHTML = `<span class="gs-dot ${inst.online ? "gs-green" : "gs-red"}"></span> <span class="gs-mono">${inst.name || "?"}</span>`;
+          const v = inst.version ?? inst.server_version ?? inst.game_version ?? inst.build ?? "";
+          const vShort = v ? ` • v${String(v).replace(/^v/i,"")}` : "";
+          left.innerHTML = `<span class="gs-dot ${inst.online ? "gs-green" : "gs-red"}"></span> <span class="gs-mono">${(inst.name || "?")}${vShort}</span>`;
           const right = document.createElement("div");
           right.className = "gs-mono right";
           right.textContent = inst.online ? `${inst.players_online ?? 0} (${gsMs(inst.latency_ms ?? null)})` : "offline";
