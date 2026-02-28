@@ -198,6 +198,100 @@
     .mobileList { display: flex !important; }
 
 </style>
+
+  <style id="game-server-styles">
+    /* Game Servers UI (uses existing theme variables) */
+    #game-servers { margin-top: 22px; }
+    #game-servers .section-title { margin: 18px 0 12px; font-size: 18px; font-weight: 800; color: var(--text); }
+
+    #game-servers .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+    @media (max-width: 900px) {
+      #game-servers .grid { grid-template-columns: 1fr; }
+    }
+
+    #game-servers .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      padding: 12px;
+      color: var(--text);
+    }
+
+    #game-servers .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 6px;
+    }
+
+    #game-servers .card-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 800;
+      color: var(--text);
+    }
+
+    #game-servers .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      display: inline-block;
+      background: rgba(255,255,255,.25);
+    }
+    #game-servers .dot-green { background: var(--ok); }
+    #game-servers .dot-red { background: var(--bad); }
+    #game-servers .dot-gray { background: rgba(255,255,255,.25); }
+
+    [data-theme="light"] #game-servers .dot-gray { background: rgba(0,0,0,.25); }
+
+    #game-servers .mono { font-family: var(--mono); }
+    #game-servers .sub { color: var(--muted); font-size: 13px; }
+
+    #game-servers .row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 7px 0;
+      border-top: 1px solid var(--border);
+    }
+    #game-servers .row:first-child { border-top: none; }
+
+    #game-servers .btn {
+      border: 1px solid var(--chipBorder);
+      background: var(--chip);
+      color: var(--text);
+      padding: 6px 10px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: 800;
+    }
+    #game-servers .btn:hover { border-color: rgba(255,255,255,.22); }
+
+    [data-theme="light"] #game-servers .btn:hover { border-color: rgba(0,0,0,.18); }
+
+    #game-servers .flyout { margin-top: 10px; display: none; }
+    #game-servers .flyout.open { display: block; }
+
+    #game-servers .pill {
+      font-size: 12px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--chipBorder);
+      background: var(--chip);
+      color: var(--text);
+      font-weight: 800;
+    }
+
+    #game-servers .right { text-align: right; }
+  </style>
 </head>
 
 <body>
