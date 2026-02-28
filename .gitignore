@@ -4,3 +4,19 @@
 *.bak.*
 *.swp
 *~
+# env / secrets
+.env
+.env.*
+
+# python
+__pycache__/
+*.pyc
+*.pyo
+
+# venv
+earthican-venv/
+venv/
+.venv/
+
+# local data (adjust if you actually want tracked)
+data/
