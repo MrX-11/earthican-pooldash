@@ -30,13 +30,13 @@ def _rcon(port: int, cmd: str, timeout: float = 2.0) -> str:
 
 def _player_count_from_listplayers(resp: str) -> int:
     """
-    Heuristic parser. We'll refine after we see real output.
-    Many servers return a header line + one line per player.
+    Counts lines like: '0. PlayerName, <id>'
+    Handles blank lines and no-player messages.
     """
-    lines = [ln.strip() for ln in (resp or "").splitlines() if ln.strip()]
-    if len(lines) <= 1:
+    if not resp:
         return 0
-    return max(0, len(lines) - 1)
+    import re
+    return len(re.findall(r"(?m)^\s*\d+\.\s+", resp))
 
 def query_asa_rcon(timeout: float = 2.0) -> Dict[str, Any]:
     instances_out: List[Dict[str, Any]] = []
