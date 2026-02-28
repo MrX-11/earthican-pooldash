@@ -206,7 +206,7 @@
 
     #game-servers .grid {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: 1fr;
       gap: 12px;
     }
     @media (max-width: 900px) {
@@ -666,10 +666,6 @@
         </div>
 
         <div class="flyout" id="mc-flyout">
-          <div class="row">
-            <div class="sub">Host:Port</div>
-            <div class="mono right" id="mc-hostport">--</div>
-          </div>
         </div>
       </div>
 
@@ -741,7 +737,6 @@
         safeText("mc-players", `${mc.players_online ?? "--"}/${mc.players_max ?? "--"}`);
         safeText("mc-version", mc.version ?? "--");
         safeText("mc-lat", fmtMs(mc.latency_ms));
-        safeText("mc-hostport", `${mc.host ?? "--"}:${mc.port ?? "--"}`);
 
         // ASA
         const asa = data.ark_asa || {};
@@ -762,7 +757,7 @@
             const row = document.createElement("div");
             row.className = "row";
             const left = document.createElement("div");
-            left.innerHTML = `<span class="mono">${inst.name || "?"}</span> <span class="sub">:${inst.game_port ?? "--"}</span>`;
+            left.innerHTML = `<span class="status-dot ${inst.online ? "dot-green" : "dot-red"}"></span> <span class="mono">${inst.name || "?"}</span>`;
             const right = document.createElement("div");
             const players = inst.players_online ?? 0;
             const lat = inst.latency_ms ?? null;
