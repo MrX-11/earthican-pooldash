@@ -199,22 +199,15 @@
 
 </style>
 
+
   <style id="game-server-styles">
-    /* Game Servers UI (uses existing theme variables) */
     #game-servers { margin-top: 22px; }
     #game-servers .section-title { margin: 18px 0 12px; font-size: 18px; font-weight: 800; color: var(--text); }
 
-    #game-servers .grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 12px;
-    }
-    @media (max-width: 900px) {
-      #game-servers .grid { grid-template-columns: 1fr; }
-    }
+    #game-servers .grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
 
     #game-servers .card {
-      background: var(--panel);
+      background: linear-gradient(180deg, var(--panel), var(--panel2));
       border: 1px solid var(--border);
       border-radius: 14px;
       box-shadow: var(--shadow);
@@ -223,42 +216,22 @@
     }
 
     #game-servers .card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
+      display:flex; justify-content:space-between; align-items:center; gap:12px;
       margin-bottom: 6px;
     }
 
-    #game-servers .card-title {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-weight: 800;
-      color: var(--text);
-    }
-
-    #game-servers .status-dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 999px;
-      display: inline-block;
-      background: rgba(255,255,255,.25);
-    }
+    #game-servers .card-title { display:flex; align-items:center; gap:10px; font-weight: 800; color: var(--text); }
+    #game-servers .status-dot { width:10px; height:10px; border-radius:999px; display:inline-block; background: rgba(255,255,255,.25); }
     #game-servers .dot-green { background: var(--ok); }
     #game-servers .dot-red { background: var(--bad); }
     #game-servers .dot-gray { background: rgba(255,255,255,.25); }
-
     [data-theme="light"] #game-servers .dot-gray { background: rgba(0,0,0,.25); }
 
     #game-servers .mono { font-family: var(--mono); }
     #game-servers .sub { color: var(--muted); font-size: 13px; }
 
     #game-servers .row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
+      display:flex; justify-content:space-between; align-items:center; gap:12px;
       padding: 7px 0;
       border-top: 1px solid var(--border);
     }
@@ -274,11 +247,10 @@
       font-weight: 800;
     }
     #game-servers .btn:hover { border-color: rgba(255,255,255,.22); }
-
     [data-theme="light"] #game-servers .btn:hover { border-color: rgba(0,0,0,.18); }
 
     #game-servers .flyout { margin-top: 10px; display: none; }
-    #game-servers .flyout.open { display: block; }
+    #game-servers .flyout.open { display:block; }
 
     #game-servers .pill {
       font-size: 12px;
@@ -289,8 +261,7 @@
       color: var(--text);
       font-weight: 800;
     }
-
-    #game-servers .right { text-align: right; }
+    #game-servers .right { text-align:right; }
   </style>
 </head>
 
@@ -367,313 +338,30 @@
 
     <!-- Mobile cards -->
     <div class="mobileList" id="mobileList"></div>
-  
 
-<div id="game-servers">
+
+  <div id="game-servers">
     <div class="section-title">Game Servers</div>
 
-    
-
-</div>
-
-
-
-<script>
-  // Theme: dark by default, optional toggle persisted in localStorage
-  (function initTheme(){
-    function setThemeIcon(theme){
-      const el = document.getElementById("themeIcon");
-      if (!el) return;
-      el.textContent = (theme === "dark") ? "🌙" : "☀️";
-    }
-
-    const saved = localStorage.getItem("theme");
-    if (saved === "light" || saved === "dark") {
-      document.documentElement.setAttribute("data-theme", saved);
-      setThemeIcon(saved);
-    } else {
-      document.documentElement.setAttribute("data-theme", "dark");
-      setThemeIcon("dark");
-    }
-    document.getElementById("themeBtn").addEventListener("click", () => {
-      const cur = document.documentElement.getAttribute("data-theme") || "dark";
-      const next = cur === "dark" ? "light" : "dark";
-      document.documentElement.setAttribute("data-theme", next);
-      setThemeIcon(next);
-      localStorage.setItem("theme", next);
-    });
-  })();
-
-  const UNITS = ["H/s","kH/s","MH/s","GH/s","TH/s","PH/s","EH/s"];
-  function formatHashrate(hs){
-    if (hs === null || hs === undefined) return "—";
-    let v = Number(hs);
-    if (!isFinite(v)) return "—";
-    let i = 0;
-    while (v >= 1000 && i < UNITS.length - 1) { v /= 1000; i++; }
-    let dec = (v >= 100) ? 0 : (v >= 10) ? 1 : 2;
-    return `${v.toFixed(dec)} ${UNITS[i]}`;
-  }
-  function fmtInt(x){ return (x===null||x===undefined) ? "—" : String(x); }
-
-  function fmtUptime(sec){
-    sec = Number(sec||0);
-    const d = Math.floor(sec/86400); sec%=86400;
-    const h = Math.floor(sec/3600); sec%=3600;
-    const m = Math.floor(sec/60);
-    return (d?`${d}d `:"") + `${h}h ${m}m`;
-  }
-
-  function fmtAgeFromTs(ts){
-    ts = Number(ts||0);
-    if (!ts) return "—";
-    const now = Math.floor(Date.now()/1000);
-    let sec = Math.max(0, now - ts);
-    if (sec < 60) return `${sec}s`;
-    if (sec < 3600) return `${Math.floor(sec/60)}m`;
-    return `${Math.floor(sec/3600)}h`;
-  }
-
-  // 15-minute online window (900s) based on lastshare
-  function isOnlineFromLastshare(ts){
-    ts = Number(ts||0);
-    if (!ts) return false;
-    const now = Math.floor(Date.now()/1000);
-    return (now - ts) <= 900;
-  }
-
-  function badge(isOnline){
-    return isOnline
-      ? `<span class="pill"><span class="dot ok"></span>online</span>`
-      : `<span class="pill"><span class="dot bad"></span>offline</span>`;
-  }
-
-  function workerPanelHTML(minerUsername, workers){
-    if (!workers || !workers.length) return "";
-    const prefix = minerUsername + ".";
-    const rows = workers.map(w => {
-      const on = isOnlineFromLastshare(w.lastshare);
-      const short = (w.name || "").startsWith(prefix) ? w.name.slice(prefix.length) : (w.name || "");
-      return `
-        <div class="workerRow">
-          <div class="wname">${short}</div>
-          <div class="wcell">${formatHashrate(w.hashrate1m_hs)}</div>
-          <div class="wcell">${fmtAgeFromTs(w.lastshare)} ago</div>
-          <div class="wstatus">${badge(on)}</div>
-        </div>
-      `;
-    }).join("");
-
-    return `
-      <div class="workerPanel">
-        <div class="label">Workers</div>
-        <div class="workerList">
-          ${rows}
-        </div>
-      </div>
-    `;
-  }
-
-
-  const els = {
-    hr1m: document.getElementById("hr1m"),
-    hr5m: document.getElementById("hr5m"),
-    hr1h: document.getElementById("hr1h"),
-    users: document.getElementById("users"),
-    workers: document.getElementById("workers"),
-    idle: document.getElementById("idle"),
-    disc: document.getElementById("disc"),
-    acc: document.getElementById("acc"),
-    rej: document.getElementById("rej"),
-    best: document.getElementById("best"),
-    sps1m: document.getElementById("sps1m"),
-    uptime: document.getElementById("uptime"),
-    lastupd: document.getElementById("lastupd"),
-    tsutc: document.getElementById("tsutc"),
-    healthDot: document.getElementById("healthDot"),
-    healthText: document.getElementById("healthText"),
-    minersBody: document.getElementById("minersBody"),
-    mobileList: document.getElementById("mobileList"),
-    search: document.getElementById("search"),
-  };
-
-  let lastSnap = null;
-
-// Persist expanded miners so Workers doesn't auto-collapse on refresh
-    const expandedMiners = new Set(); // usernames
-
-    function toggleMiner(username){
-      if (expandedMiners.has(username)) expandedMiners.delete(username);
-      else expandedMiners.add(username);
-      if (lastSnap) render(lastSnap);
-    }
-
-    function escAttr(s){
-      return String(s ?? "").replace(/\\/g, "\\\\").replace(/'/g, "\\'");
-    }
-
-  function render(snap){
-    lastSnap = snap;
-    const p = snap.pool || {};
-    const hr = p.hashrate_hs || {};
-    const c = p.counts || {};
-    const s = p.shares || {};
-
-    els.hr1m.textContent = formatHashrate(hr["1m"]);
-    els.hr5m.textContent = formatHashrate(hr["5m"]);
-    els.hr1h.textContent = formatHashrate(hr["1h"]);
-
-    els.users.textContent = fmtInt(c.users);
-    els.workers.textContent = fmtInt(c.workers);
-    els.idle.textContent = fmtInt(c.idle);
-    els.disc.textContent = fmtInt(c.disconnected);
-
-    els.acc.textContent = fmtInt(s.accepted);
-    els.rej.textContent = fmtInt(s.rejected);
-    els.best.textContent = fmtInt(s.bestshare);
-    els.sps1m.textContent = (s.sps1m ?? "—");
-
-    els.uptime.textContent = fmtUptime(p.runtime_sec);
-    els.lastupd.textContent = p.lastupdate_ts ? (fmtAgeFromTs(p.lastupdate_ts) + " ago") : "—";
-    els.tsutc.textContent = snap.ts_utc ? snap.ts_utc.split("T")[1].slice(0,8) + "Z" : "—";
-
-    // Health indicator: green if lastupdate within 90s, else red
-    const ok = (typeof p.lastupdate_age_sec === "number")
-      ? (p.lastupdate_age_sec <= 90)
-      : (p.lastupdate_ts ? ((Math.floor(Date.now()/1000) - p.lastupdate_ts) <= 90) : false);
-
-    els.healthDot.className = "dot " + (ok ? "ok" : "bad");
-    els.healthText.textContent = ok ? "live" : "stale";
-
-    const q = (els.search.value || "").trim().toLowerCase();
-
-    let miners = (snap.miners || []);
-
-    // Default view: top 10 miners by hashrate (snapshot is already sorted)
-    if (!q) {
-      miners = miners.slice(0, 10);
-    } else {
-      miners = miners.filter(m => {
-        if ((m.username || "").toLowerCase().includes(q)) return true;
-        return (m.workers_list || []).some(w => (w.name || "").toLowerCase().includes(q));
-      });
-    }
-
-    // Desktop table
-    els.minersBody.innerHTML = miners.map(m => {
-      const workers = m.workers_list || [];
-      const minerOnline = isOnlineFromLastshare(m.lastshare);
-      const onlineWorkers = workers.filter(w => isOnlineFromLastshare(w.lastshare)).length;
-
-      const isOpen = expandedMiners.has(m.username);
-      const chev = isOpen ? "▾" : "▸";
-
-      const workersBtn = workers.length ? `
-        <button class="workerToggle" type="button" onclick="toggleMiner('${escAttr(m.username)}')">
-          <span class="workerChevron">${chev}</span>
-          Workers <span class="mono">${onlineWorkers}/${m.workers ?? workers.length}</span>
-        </button>
-      ` : `<span class="pill"><span class="dot bad"></span>no workers</span>`;
-
-      const minerCell = `
-        <div style="display:flex; flex-direction:column; gap:8px;">
-          <div style="display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap;">
-            <div style="font-weight:800; overflow:hidden; text-overflow:ellipsis;">${m.username}</div>
-            <div style="display:flex; gap:8px; align-items:center;">
-              ${workersBtn}
-              ${badge(minerOnline)}
-            </div>
+    <div class="grid">
+      <div class="card" id="mc-card">
+        <div class="card-header">
+          <div class="card-title">
+            <span class="status-dot dot-gray" id="mc-dot"></span>
+            <span>Minecraft (PaperMC)</span>
+            <span class="pill mono" id="mc-lat">-- ms</span>
           </div>
-          ${isOpen ? workerPanelHTML(m.username, workers) : ""}
-        </div>
-      `;
-
-      return `
-        <tr>
-          <td>${minerCell}</td>
-          <td class="mono">${formatHashrate(m.hashrate1m_hs)}</td>
-          <td class="mono">${onlineWorkers}/${m.workers ?? workers.length ?? 0}</td>
-          <td class="mono">${fmtAgeFromTs(m.lastshare)} ago</td>
-          <td>${badge(minerOnline)}</td>
-        </tr>
-      `;
-    }).join("");
-// Mobile cards
-    els.mobileList.innerHTML = miners.map(m => {
-      const workers = m.workers_list || [];
-      const minerOnline = isOnlineFromLastshare(m.lastshare);
-      const onlineWorkers = workers.filter(w => isOnlineFromLastshare(w.lastshare)).length;
-
-      const isOpen = expandedMiners.has(m.username);
-      const chev = isOpen ? "▾" : "▸";
-
-      return `
-        <div class="mcard">
-          <div class="mrow">
-            <div class="mname">${m.username}</div>
-            <div>${badge(minerOnline)}</div>
-          </div>
-          <div class="mmeta">
-            <div class="kv"><div class="k">Hashrate (1m)</div><div class="v mono">${formatHashrate(m.hashrate1m_hs)}</div></div>
-            <div class="kv"><div class="k">Workers</div><div class="v mono">${onlineWorkers}/${m.workers ?? workers.length ?? 0}</div></div>
-            <div class="kv"><div class="k">Last share</div><div class="v mono">${fmtAgeFromTs(m.lastshare)} ago</div></div>
-            <div class="kv"><div class="k">Best share</div><div class="v mono">${m.bestshare ? Math.floor(m.bestshare).toString() : "—"}</div></div>
-          </div>
-
-          ${workers.length ? `
-            <div style="margin-top:10px;">
-              <button class="workerToggle" type="button" onclick="toggleMiner('${escAttr(m.username)}')">
-                <span class="workerChevron">${chev}</span>
-                Workers <span class="mono">${onlineWorkers}/${m.workers ?? workers.length}</span>
-              </button>
-              ${isOpen ? workerPanelHTML(m.username, workers) : ""}
-            </div>
-          ` : ``}
-        </div>
-      `;
-    }).join("");
-}
-
-  async function refresh(){
-    try {
-      const snap = await fetch("/api/snapshot", { cache: "no-store" }).then(r => r.json());
-      render(snap);
-    } catch (e) {
-      els.healthDot.className = "dot bad";
-      els.healthText.textContent = "error";
-    }
-  }
-
-  els.search.addEventListener("input", () => { if (lastSnap) render(lastSnap); });
-
-  refresh();
-  setInterval(refresh, 5000);
-</script>
           <button class="btn" type="button" data-toggle="mc-flyout">Details</button>
         </div>
 
-        <div class="row">
-          <div class="sub">Players</div>
-          <div class="mono" id="mc-players">--/--</div>
-        </div>
-        <div class="row">
-          <div class="sub">Version</div>
-          <div class="mono right" id="mc-version">--</div>
-        </div>
-<div class="row">
-          <div class="sub">MOTD</div>
-          <div class="mono right" id="mc-motd">--</div>
-        </div>
-        <div class="row">
-          <div class="sub">Updated</div>
-          <div class="mono right" id="mc-updated">--</div>
-        </div>
+        <div class="row"><div class="sub">Players</div><div class="mono right" id="mc-players">--/--</div></div>
+        <div class="row"><div class="sub">Version</div><div class="mono right" id="mc-version">--</div></div>
+        <div class="row"><div class="sub">MOTD</div><div class="mono right" id="mc-motd">--</div></div>
+        <div class="row"><div class="sub">Updated</div><div class="mono right" id="mc-updated">--</div></div>
 
-        <div class="flyout" id="mc-flyout">
-        </div>
+        <div class="flyout" id="mc-flyout"></div>
       </div>
 
-      <!-- ARK ASA -->
       <div class="card" id="asa-card">
         <div class="card-header">
           <div class="card-title">
@@ -684,14 +372,8 @@
           <button class="btn" type="button" data-toggle="asa-flyout">Details</button>
         </div>
 
-        <div class="row">
-          <div class="sub">Instances Online</div>
-          <div class="mono" id="asa-online">--/--</div>
-        </div>
-        <div class="row">
-          <div class="sub">Total Players</div>
-          <div class="mono right" id="asa-players">--</div>
-        </div>
+        <div class="row"><div class="sub">Instances Online</div><div class="mono right" id="asa-online">--/--</div></div>
+        <div class="row"><div class="sub">Total Players</div><div class="mono right" id="asa-players">--</div></div>
 
         <div class="flyout" id="asa-flyout">
           <div class="sub" style="margin: 6px 0 8px;">Per-map</div>
@@ -699,35 +381,23 @@
         </div>
       </div>
     </div>
-  
+  </div>
 
-  <div class="grid">
-      <!-- Minecraft -->
-      <div class="card" id="mc-card">
-        <div class="card-header">
-          <div class="card-title">
-            <span class="status-dot dot-gray" id="mc-dot"></span>
-            <span>Minecraft (PaperMC)</span>
-            <span class="pill mono" id="mc-lat">-- ms</span>
-          </div>
 </div>
 
+
   <script>
-    // Flyout toggle
     document.addEventListener("click", (e) => {
       const btn = e.target.closest("[data-toggle]");
       if (!btn) return;
       const id = btn.getAttribute("data-toggle");
       const el = document.getElementById(id);
-      if (!el) return;
-      el.classList.toggle("open");
+      if (el) el.classList.toggle("open");
     });
 
     function setDot(dotEl, state) {
       dotEl.classList.remove("dot-green","dot-red","dot-gray");
-      if (state === "green") dotEl.classList.add("dot-green");
-      else if (state === "red") dotEl.classList.add("dot-red");
-      else dotEl.classList.add("dot-gray");
+      dotEl.classList.add(state === "green" ? "dot-green" : state === "red" ? "dot-red" : "dot-gray");
     }
 
     function safeText(id, val) {
@@ -746,7 +416,6 @@
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         const data = await r.json();
 
-        // Minecraft
         const mc = data.minecraft || {};
         setDot(document.getElementById("mc-dot"), mc.online ? "green" : "red");
         safeText("mc-players", `${mc.players_online ?? "--"}/${mc.players_max ?? "--"}`);
@@ -755,7 +424,6 @@
         safeText("mc-updated", "just now");
         safeText("mc-lat", fmtMs(mc.latency_ms));
 
-        // ASA
         const asa = data.ark_asa || {};
         const online = asa.online_instances ?? 0;
         const total = asa.total_instances ?? (asa.instances ? asa.instances.length : 0);
@@ -766,7 +434,6 @@
         safeText("asa-players", totalPlayers);
         safeText("asa-total", `${totalPlayers} players`);
 
-        // Per-map list
         const list = document.getElementById("asa-list");
         if (list) {
           list.innerHTML = "";
@@ -776,26 +443,21 @@
             const left = document.createElement("div");
             left.innerHTML = `<span class="status-dot ${inst.online ? "dot-green" : "dot-red"}"></span> <span class="mono">${inst.name || "?"}</span>`;
             const right = document.createElement("div");
-            const players = inst.players_online ?? 0;
-            const lat = inst.latency_ms ?? null;
             right.className = "mono right";
-            right.textContent = inst.online ? `${players}  (${fmtMs(lat)})` : "offline";
+            right.textContent = inst.online ? `${inst.players_online ?? 0}  (${fmtMs(inst.latency_ms ?? null)})` : "offline";
             row.appendChild(left);
             row.appendChild(right);
             list.appendChild(row);
           });
         }
       } catch (e) {
-        // If fetch fails, set to unknown
         setDot(document.getElementById("mc-dot"), "gray");
         setDot(document.getElementById("asa-dot"), "gray");
       }
     }
 
-    // Initial + poll
     loadServerStatus();
     setInterval(loadServerStatus, 10000);
   </script>
-
 </body>
 </html>
