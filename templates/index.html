@@ -771,7 +771,22 @@ function gsSetDot(el, state){
           left.innerHTML = `<span class="gs-dot ${inst.online ? "gs-green" : "gs-red"}"></span> <span class="gs-mono">${inst.name || "?"}</span>`;
           const right = document.createElement("div");
           right.className = "gs-mono right";
-          right.textContent = inst.online ? `${inst.players_online ?? 0}  (${gsMs(inst.latency_ms ?? null)})` : "offline";
+          if (inst.online) {
+            right.textContent = `${inst.players_online ?? 0} (${gsMs(inst.latency_ms ?? null)})`;
+            const motd = (inst.motd ?? "").toString().trim();
+            if (motd) {
+              const sub = document.createElement("div");
+              sub.className = "gs-sub";
+              sub.style.marginTop = "4px";
+              sub.style.whiteSpace = "normal";
+              sub.style.maxWidth = "520px";
+              sub.style.textAlign = "right";
+              sub.textContent = motd;
+              right.appendChild(sub);
+            }
+          } else {
+            right.textContent = "offline";
+          }
           row.appendChild(left);
           row.appendChild(right);
           list.appendChild(row);

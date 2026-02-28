@@ -1,31 +1,64 @@
 from __future__ import annotations
 
+import json
+import os
 import time
-from typing import Any, Dict, List
+from typing import Any, Dict
+
 from asa_rcon import query_asa_rcon
 
-# ---- Config (local machine) ----
+# ---- Config ----
 MINECRAFT_HOST = "192.168.1.50"
 MINECRAFT_PORT = 25565
 
-ASA_HOST = "127.0.0.1"
-ASA_INSTANCES: List[Dict[str, Any]] = [
-    {"name": "Island",      "query_port": 7779},
-    {"name": "Scorched",    "query_port": 7789},
-    {"name": "The Center",  "query_port": 7799},
-    {"name": "Aberration",  "query_port": 7809},
-    {"name": "Extinction",  "query_port": 7819},
-    {"name": "Astraeos",    "query_port": 7829},
-    {"name": "Ragnarok",    "query_port": 7839},
-    {"name": "Valguero",    "query_port": 7849},
-    {"name": "Lost Colony", "query_port": 7859},
-]
+ASA_META_PATH = "/var/www/earthican/data/asa_motd_meta.json"
+
+
+def _safe_load_json(path: str) -> dict:
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def _norm_token(s: Any) -> str:
+    """
+    Normalize names so we can map:
+      "TheIsland" / "TheIsland_WP" / "misterXworld_TheIsland" -> "theisland"
+      "Astraeos" / "Astraeos_WP" / "misterXworld_Astraeos"     -> "astraeos"
+    """
+    if not s:
+        return ""
+    s = str(s).strip().strip('"').strip("'")
+    s = s.replace("_WP", "")
+    # take suffix after last underscore for "misterXworld_Astraeos"
+    if "_" in s:
+        s = s.split("_")[-1]
+    # remove spaces/punct for matching
+    s = "".join(ch for ch in s.lower() if ch.isalnum())
+    return s
+
+
+def _load_asa_meta_map() -> Dict[str, Dict[str, Any]]:
+    meta = _safe_load_json(ASA_META_PATH)
+    out: Dict[str, Dict[str, Any]] = {}
+    for inst in meta.get("instances", []):
+        keys = [
+            _norm_token(inst.get("instance_name")),
+            _norm_token(inst.get("map_name")),
+            _norm_token(inst.get("session_name")),
+        ]
+        for k in keys:
+            if k:
+                out[k] = inst
+    return out
 
 
 def query_minecraft(host: str = MINECRAFT_HOST, port: int = MINECRAFT_PORT, timeout: float = 1.5) -> Dict[str, Any]:
     """
     Minecraft Java status ping via mcstatus.
-    Returns {online, players_online, players_max, version, latency_ms, ...}
+    Returns {online, players_online, players_max, version, motd, latency_ms, ...}
     """
     out: Dict[str, Any] = {"online": False, "host": host, "port": port}
     try:
@@ -45,58 +78,33 @@ def query_minecraft(host: str = MINECRAFT_HOST, port: int = MINECRAFT_PORT, time
     return out
 
 
-def query_asa(host: str = ASA_HOST, instances: List[Dict[str, Any]] = ASA_INSTANCES, timeout: float = 1.5) -> Dict[str, Any]:
+def query_asa(timeout: float = 2.0) -> Dict[str, Any]:
     """
-    ARK: Survival Ascended query via Valve/Steam A2S on per-instance query ports.
-    Returns a cluster summary plus per-instance info rows.
+    RCON-based ASA status (returns cluster summary + per-instance list).
+    Augments each instance with MOTD/session_name from asa_motd_meta.json if present.
     """
-    result: Dict[str, Any] = {
-        "host": host,
-        "instances": [],
-        "online_instances": 0,
-        "total_instances": len(instances),
-        "total_players": 0,
-    }
+    result: Dict[str, Any] = query_asa_rcon(timeout=timeout) or {}
+    instances = result.get("instances") or []
 
-    try:
-        import a2s
-    except Exception as e:
-        result["error"] = f"a2s import failed: {e}"
-        return result
+    meta_map = _load_asa_meta_map()
+    for row in instances:
+        key = _norm_token(row.get("name")) or _norm_token(row.get("map")) or _norm_token(row.get("server_name"))
+        meta = meta_map.get(key)
+        if not meta:
+            continue
 
-    for inst in instances:
-        name = str(inst.get("name", "unknown"))
-        port = int(inst.get("query_port", 0))
-        row: Dict[str, Any] = {"name": name, "query_port": port, "online": False}
+        # Attach friendly/session naming
+        row["session_name"] = meta.get("session_name") or meta.get("instance_name")
 
-        try:
-            start = time.time()
-            info = a2s.info((host, port), timeout=timeout)
-            latency_ms = (time.time() - start) * 1000.0
+        # Attach MOTD only when enabled
+        if str(meta.get("enable_motd", "")).upper() == "TRUE":
+            row["motd"] = meta.get("motd")
+            row["motd_duration"] = meta.get("motd_duration")
+        else:
+            row["motd"] = None
 
-            players = int(getattr(info, "player_count", 0) or 0)
-            max_players = int(getattr(info, "max_players", 0) or 0)
-
-            row.update({
-                "online": True,
-                "server_name": getattr(info, "server_name", None),
-                "map": getattr(info, "map_name", None),
-                "players_online": players,
-                "players_max": max_players,
-                "latency_ms": round(latency_ms, 1),
-            })
-
-            result["online_instances"] += 1
-            result["total_players"] += players
-
-        except Exception as e:
-            row["error"] = str(e)
-
-        result["instances"].append(row)
+        # Optional: ports from YAML (useful for connect display)
+        row["asa_port"] = meta.get("asa_port")
+        row["rcon_port"] = meta.get("rcon_port")
 
     return result
-
-
-def query_asa(host: str = 'unused', instances=None, timeout: float = 2.0):
-    # RCON-based ASA status from Nebuchadnezzar (TCP)
-    return query_asa_rcon(timeout=timeout)
