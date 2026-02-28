@@ -1,4 +1,6 @@
 from flask import Flask, jsonify, render_template
+import time
+from server_monitor import query_minecraft, query_asa
 import os
 import json
 
@@ -18,4 +20,13 @@ def index():
 @app.get("/api/snapshot")
 def api_snapshot():
     return jsonify(load_snap())
+
+
+@app.get("/api/server_status")
+def api_server_status():
+    return jsonify({
+        "ts": int(time.time()),
+        "minecraft": query_minecraft(),
+        "ark_asa": query_asa(),
+    })
 

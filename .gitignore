@@ -1,6 +1,6 @@
-earthican-venv/
-data/
-__pycache__/
-*.pyc
-.env
-*.log
+# Local backups / scratch
+*.bak
+*.bak_*
+*.bak.*
+*.swp
+*~
