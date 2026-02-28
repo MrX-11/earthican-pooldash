@@ -310,6 +310,41 @@
 
     #game-servers .right { text-align:right; }
 
+    #game-servers .gs-ver {
+
+    /* Per-map row layout: prevent right side from getting squeezed on mobile */
+    #game-servers #asa-list .gs-row{
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+    }
+    #game-servers #asa-list .gs-row .right{
+      white-space: nowrap;
+      flex: 0 0 auto;
+      text-align: right;
+    }
+
+    @media (max-width: 520px){
+      #game-servers #asa-list .gs-row{
+        gap: 8px;
+      }
+      #game-servers #asa-list .gs-row .right{
+        font-size: 12px;
+      }
+      #game-servers .gs-ver{
+        font-size: 11px;
+        opacity: 0.75;
+        margin-left: 6px;
+      }
+    }
+      font-size: 12px;
+      color: var(--muted);
+      opacity: 0.85;
+      margin-left: 8px;
+      font-weight: 700;
+    }
+
     #game-servers .gs-wrap {
       white-space: normal;
       overflow-wrap: anywhere;
@@ -804,8 +839,8 @@ function gsSetDot(el, state){
           row.className = "gs-row";
           const left = document.createElement("div");
           const v = inst.version ?? inst.server_version ?? inst.game_version ?? inst.build ?? "";
-          const vShort = v ? ` • v${String(v).replace(/^v/i,"")}` : "";
-          left.innerHTML = `<span class="gs-dot ${inst.online ? "gs-green" : "gs-red"}"></span> <span class="gs-mono">${(inst.name || "?")}${vShort}</span>`;
+          const vTag = v ? ` <span class="gs-ver">v${String(v).replace(/^v/i,"")}</span>` : "";
+          left.innerHTML = `<span class="gs-dot ${inst.online ? "gs-green" : "gs-red"}"></span> <span class="gs-mono">${(inst.name || "?")}${vTag}</span>`;
           const right = document.createElement("div");
           right.className = "gs-mono right";
           right.textContent = inst.online ? `${inst.players_online ?? 0} (${gsMs(inst.latency_ms ?? null)})` : "offline";
