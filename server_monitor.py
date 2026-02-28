@@ -106,5 +106,6 @@ def query_asa(timeout: float = 2.0) -> Dict[str, Any]:
         # Optional: ports from YAML (useful for connect display)
         row["asa_port"] = meta.get("asa_port")
         row["rcon_port"] = meta.get("rcon_port")
+        row["version"] = meta.get("server_version")
 
     return result
