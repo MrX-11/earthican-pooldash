@@ -379,6 +379,24 @@
 
   <div class="gs-grid">
 
+    <!-- Minecraft -->
+    <div class="gs-card" id="mc-card">
+      <div class="gs-header">
+        <div class="gs-hleft">
+          <span class="gs-dot gs-gray" id="mc-dot"></span>
+          <span>Minecraft (PaperMC)</span>
+          <span class="gs-pill gs-mono" id="mc-lat">-- ms</span>
+        </div>
+        <button class="gs-btn" type="button" data-toggle="mc-flyout">Details</button>
+      </div>
+
+      <div class="gs-row"><div class="gs-sub">Players</div><div class="gs-mono right" id="mc-players">--/--</div></div>
+      <div class="gs-row"><div class="gs-sub">Version</div><div class="gs-mono right" id="mc-version">--</div></div>
+      <div class="gs-row"><div class="gs-sub">MOTD</div><div class="gs-mono right" id="mc-motd">--</div></div>
+      <div class="gs-row"><div class="gs-sub">Updated</div><div class="gs-mono right" id="mc-updated">--</div></div>
+
+      <div class="gs-flyout" id="mc-flyout"></div>
+    </div>
 
     <!-- ARK ASA -->
     <div class="gs-card" id="asa-card">
@@ -410,6 +428,278 @@
 
 
 </div>
+<script>
+  // Theme: dark by default, optional toggle persisted in localStorage
+  (function initTheme(){
+    function setThemeIcon(theme){
+      const el = document.getElementById("themeIcon");
+      if (!el) return;
+      el.textContent = (theme === "dark") ? "🌙" : "☀️";
+    }
+
+    const saved = localStorage.getItem("theme");
+    if (saved === "light" || saved === "dark") {
+      document.documentElement.setAttribute("data-theme", saved);
+      setThemeIcon(saved);
+    } else {
+      document.documentElement.setAttribute("data-theme", "dark");
+      setThemeIcon("dark");
+    }
+    const themeBtn = document.getElementById("themeBtn");
+    if (themeBtn) themeBtn.addEventListener("click", () => {
+      const cur = document.documentElement.getAttribute("data-theme") || "dark";
+      const next = cur === "dark" ? "light" : "dark";
+      document.documentElement.setAttribute("data-theme", next);
+      setThemeIcon(next);
+      localStorage.setItem("theme", next);
+    });
+  })();
+
+  const UNITS = ["H/s","kH/s","MH/s","GH/s","TH/s","PH/s","EH/s"];
+  function formatHashrate(hs){
+    if (hs === null || hs === undefined) return "—";
+    let v = Number(hs);
+    if (!isFinite(v)) return "—";
+    let i = 0;
+    while (v >= 1000 && i < UNITS.length - 1) { v /= 1000; i++; }
+    let dec = (v >= 100) ? 0 : (v >= 10) ? 1 : 2;
+    return `${v.toFixed(dec)} ${UNITS[i]}`;
+  }
+  function fmtInt(x){ return (x===null||x===undefined) ? "—" : String(x); }
+
+  function fmtUptime(sec){
+    sec = Number(sec||0);
+    const d = Math.floor(sec/86400); sec%=86400;
+    const h = Math.floor(sec/3600); sec%=3600;
+    const m = Math.floor(sec/60);
+    return (d?`${d}d `:"") + `${h}h ${m}m`;
+  }
+
+  function fmtAgeFromTs(ts){
+    ts = Number(ts||0);
+    if (!ts) return "—";
+    const now = Math.floor(Date.now()/1000);
+    let sec = Math.max(0, now - ts);
+    if (sec < 60) return `${sec}s`;
+    if (sec < 3600) return `${Math.floor(sec/60)}m`;
+    return `${Math.floor(sec/3600)}h`;
+  }
+
+  // 15-minute online window (900s) based on lastshare
+  function isOnlineFromLastshare(ts){
+    ts = Number(ts||0);
+    if (!ts) return false;
+    const now = Math.floor(Date.now()/1000);
+    return (now - ts) <= 900;
+  }
+
+  function badge(isOnline){
+    return isOnline
+      ? `<span class="pill"><span class="dot ok"></span>online</span>`
+      : `<span class="pill"><span class="dot bad"></span>offline</span>`;
+  }
+
+  function workerPanelHTML(minerUsername, workers){
+    if (!workers || !workers.length) return "";
+    const prefix = minerUsername + ".";
+    const rows = workers.map(w => {
+      const on = isOnlineFromLastshare(w.lastshare);
+      const short = (w.name || "").startsWith(prefix) ? w.name.slice(prefix.length) : (w.name || "");
+      return `
+        <div class="workerRow">
+          <div class="wname">${short}</div>
+          <div class="wcell">${formatHashrate(w.hashrate1m_hs)}</div>
+          <div class="wcell">${fmtAgeFromTs(w.lastshare)} ago</div>
+          <div class="wstatus">${badge(on)}</div>
+        </div>
+      `;
+    }).join("");
+
+    return `
+      <div class="workerPanel">
+        <div class="label">Workers</div>
+        <div class="workerList">
+          ${rows}
+        </div>
+      </div>
+    `;
+  }
+
+
+  const els = {
+    hr1m: document.getElementById("hr1m"),
+    hr5m: document.getElementById("hr5m"),
+    hr1h: document.getElementById("hr1h"),
+    users: document.getElementById("users"),
+    workers: document.getElementById("workers"),
+    idle: document.getElementById("idle"),
+    disc: document.getElementById("disc"),
+    acc: document.getElementById("acc"),
+    rej: document.getElementById("rej"),
+    best: document.getElementById("best"),
+    sps1m: document.getElementById("sps1m"),
+    uptime: document.getElementById("uptime"),
+    lastupd: document.getElementById("lastupd"),
+    tsutc: document.getElementById("tsutc"),
+    healthDot: document.getElementById("healthDot"),
+    healthText: document.getElementById("healthText"),
+    minersBody: document.getElementById("minersBody"),
+    mobileList: document.getElementById("mobileList"),
+    search: document.getElementById("search"),
+  };
+
+  let lastSnap = null;
+
+// Persist expanded miners so Workers doesn't auto-collapse on refresh
+    const expandedMiners = new Set(); // usernames
+
+    function toggleMiner(username){
+      if (expandedMiners.has(username)) expandedMiners.delete(username);
+      else expandedMiners.add(username);
+      if (lastSnap) render(lastSnap);
+    }
+
+    function escAttr(s){
+      return String(s ?? "").replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+    }
+
+  function render(snap){
+    lastSnap = snap;
+    const p = snap.pool || {};
+    const hr = p.hashrate_hs || {};
+    const c = p.counts || {};
+    const s = p.shares || {};
+
+    els.hr1m.textContent = formatHashrate(hr["1m"]);
+    els.hr5m.textContent = formatHashrate(hr["5m"]);
+    els.hr1h.textContent = formatHashrate(hr["1h"]);
+
+    els.users.textContent = fmtInt(c.users);
+    els.workers.textContent = fmtInt(c.workers);
+    els.idle.textContent = fmtInt(c.idle);
+    els.disc.textContent = fmtInt(c.disconnected);
+
+    els.acc.textContent = fmtInt(s.accepted);
+    els.rej.textContent = fmtInt(s.rejected);
+    els.best.textContent = fmtInt(s.bestshare);
+    els.sps1m.textContent = (s.sps1m ?? "—");
+
+    els.uptime.textContent = fmtUptime(p.runtime_sec);
+    els.lastupd.textContent = p.lastupdate_ts ? (fmtAgeFromTs(p.lastupdate_ts) + " ago") : "—";
+    els.tsutc.textContent = snap.ts_utc ? snap.ts_utc.split("T")[1].slice(0,8) + "Z" : "—";
+
+    // Health indicator: green if lastupdate within 90s, else red
+    const ok = (typeof p.lastupdate_age_sec === "number")
+      ? (p.lastupdate_age_sec <= 90)
+      : (p.lastupdate_ts ? ((Math.floor(Date.now()/1000) - p.lastupdate_ts) <= 90) : false);
+
+    els.healthDot.className = "dot " + (ok ? "ok" : "bad");
+    els.healthText.textContent = ok ? "live" : "stale";
+
+    const q = (els.search.value || "").trim().toLowerCase();
+
+    let miners = (snap.miners || []);
+
+    // Default view: top 10 miners by hashrate (snapshot is already sorted)
+    if (!q) {
+      miners = miners.slice(0, 10);
+    } else {
+      miners = miners.filter(m => {
+        if ((m.username || "").toLowerCase().includes(q)) return true;
+        return (m.workers_list || []).some(w => (w.name || "").toLowerCase().includes(q));
+      });
+    }
+
+    // Desktop table
+    els.minersBody.innerHTML = miners.map(m => {
+      const workers = m.workers_list || [];
+      const minerOnline = isOnlineFromLastshare(m.lastshare);
+      const onlineWorkers = workers.filter(w => isOnlineFromLastshare(w.lastshare)).length;
+
+      const isOpen = expandedMiners.has(m.username);
+      const chev = isOpen ? "▾" : "▸";
+
+      const workersBtn = workers.length ? `
+        <button class="workerToggle" type="button" onclick="toggleMiner('${escAttr(m.username)}')">
+          <span class="workerChevron">${chev}</span>
+          Workers <span class="mono">${onlineWorkers}/${m.workers ?? workers.length}</span>
+        </button>
+      ` : `<span class="pill"><span class="dot bad"></span>no workers</span>`;
+
+      const minerCell = `
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <div style="display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap;">
+            <div style="font-weight:800; overflow:hidden; text-overflow:ellipsis;">${m.username}</div>
+            <div style="display:flex; gap:8px; align-items:center;">
+              ${workersBtn}
+              ${badge(minerOnline)}
+            </div>
+          </div>
+          ${isOpen ? workerPanelHTML(m.username, workers) : ""}
+        </div>
+      `;
+
+      return `
+        <tr>
+          <td>${minerCell}</td>
+          <td class="mono">${formatHashrate(m.hashrate1m_hs)}</td>
+          <td class="mono">${onlineWorkers}/${m.workers ?? workers.length ?? 0}</td>
+          <td class="mono">${fmtAgeFromTs(m.lastshare)} ago</td>
+          <td>${badge(minerOnline)}</td>
+        </tr>
+      `;
+    }).join("");
+// Mobile cards
+    els.mobileList.innerHTML = miners.map(m => {
+      const workers = m.workers_list || [];
+      const minerOnline = isOnlineFromLastshare(m.lastshare);
+      const onlineWorkers = workers.filter(w => isOnlineFromLastshare(w.lastshare)).length;
+
+      const isOpen = expandedMiners.has(m.username);
+      const chev = isOpen ? "▾" : "▸";
+
+      return `
+        <div class="mcard">
+          <div class="mrow">
+            <div class="mname">${m.username}</div>
+            <div>${badge(minerOnline)}</div>
+          </div>
+          <div class="mmeta">
+            <div class="kv"><div class="k">Hashrate (1m)</div><div class="v mono">${formatHashrate(m.hashrate1m_hs)}</div></div>
+            <div class="kv"><div class="k">Workers</div><div class="v mono">${onlineWorkers}/${m.workers ?? workers.length ?? 0}</div></div>
+            <div class="kv"><div class="k">Last share</div><div class="v mono">${fmtAgeFromTs(m.lastshare)} ago</div></div>
+            <div class="kv"><div class="k">Best share</div><div class="v mono">${m.bestshare ? Math.floor(m.bestshare).toString() : "—"}</div></div>
+          </div>
+
+          ${workers.length ? `
+            <div style="margin-top:10px;">
+              <button class="workerToggle" type="button" onclick="toggleMiner('${escAttr(m.username)}')">
+                <span class="workerChevron">${chev}</span>
+                Workers <span class="mono">${onlineWorkers}/${m.workers ?? workers.length}</span>
+              </button>
+              ${isOpen ? workerPanelHTML(m.username, workers) : ""}
+            </div>
+          ` : ``}
+        </div>
+      `;
+    }).join("");
+}
+
+  async function refresh(){
+    try {
+      const snap = await fetch("/api/snapshot", { cache: "no-store" }).then(r => r.json());
+      render(snap);
+    } catch (e) {
+      els.healthDot.className = "dot bad";
+      els.healthText.textContent = "error";
+    }
+  }
+
+  els.search.addEventListener("input", () => { if (lastSnap) render(lastSnap); });
+
+  refresh();
+  setInterval(refresh, 5000);
+</script>
 <script>
 // GAME_SERVERS
   // Scope clicks to the Game Servers section only
