@@ -6,6 +6,11 @@
   <title>earthican.network — Pool Status</title>
 
   <style>
+
+    /* Mobile safety */
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { max-width: 100%; overflow-x: hidden; }
+
     :root {
       --bg: #0b0f14;
       --panel: #0f1620;
@@ -196,6 +201,172 @@
     /* --- FINAL VISIBILITY POLICY (cards always; table hidden) --- */
     table { display: none !important; }
     .mobileList { display: flex !important; }
+    }
+
+
+    @media (max-width: 520px){
+      /* Smaller side padding on phones */
+      body { padding-left: 10px; padding-right: 10px; }
+
+      /* Clamp common card containers */
+      .card, .panel, .section, .gs-card,
+      #game-servers, #miners {
+        width: 100%;
+        max-width: 100%;
+      }
+    }
+
+
+    /* ---- Mobile: allow header chips/buttons to wrap instead of forcing width ---- */
+
+    @media (max-width: 640px) {
+
+      /* When header wraps, push Details to far right (MC + ARK) */
+      #game-servers button.gs-btn[data-toggle="mc-flyout"],
+      #game-servers button.gs-btn[data-toggle="asa-flyout"]{
+        margin-left: auto;
+        align-self: flex-end;
+      }
+      /* if Details is an <a> or <button>, shove it to the far right even if other chips exist */
+      #game-servers .gs-card-header .right a,
+      #game-servers .gs-card-header .right button {
+        margin-left: auto;
+      }
+    }
+    #game-servers .gs-card-header,
+    #game-servers .gs-header,
+    #game-servers .gs-top,
+    #game-servers .gs-titlebar,
+    #game-servers .gs-row.gs-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;            /* key */
+      min-width: 0;
+    }
+
+    /* Anything that looks like the "right side" (players badge + Details button) */
+    #game-servers .gs-card-header .right,
+    #game-servers .gs-header .right,
+    #game-servers .gs-top .right,
+    #game-servers .gs-titlebar .right,
+    #game-servers .gs-row.gs-head .right {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      flex-wrap: wrap;            /* key */
+      min-width: 0;
+      max-width: 100%;
+    }
+
+    /* Prevent long titles from pushing layout wider */
+    #game-servers .gs-card-header .gs-title,
+    #game-servers .gs-header .gs-title,
+    #game-servers .gs-top .gs-title,
+    #game-servers .gs-titlebar .gs-title {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1 1 auto;
+    }
+
+    @media (max-width: 520px){
+      /* Put chips/buttons on their own line when tight */
+      #game-servers .gs-card-header .right,
+      #game-servers .gs-header .right,
+      #game-servers .gs-top .right,
+      #game-servers .gs-titlebar .right,
+      #game-servers .gs-row.gs-head .right {
+        width: 100%;
+        justify-content: flex-end;
+      }
+    }
+
+
+    /* ---- Tiny phones: prevent overflow + tighten spacing ---- */
+    html, body { max-width: 100%; overflow-x: hidden; }
+    *, *::before, *::after { box-sizing: border-box; }
+
+    @media (max-width: 420px) {
+      /* Reduce page padding so cards fit */
+      .container, .wrap, .page, main {
+        max-width: 100%;
+      }
+
+      /* If you have a main container with side padding, this helps a lot */
+      .container { padding-left: 12px; padding-right: 12px; }
+
+      /* Cards: slightly tighter padding */
+      .card, .gs-card { padding: 14px; }
+
+      /* Header chips/buttons: smaller so they don't force width */
+      #game-servers .gs-btn {
+        padding: 6px 10px;
+        font-size: 12px;
+      }
+      #game-servers .gs-chip,
+      #game-servers .pill,
+      #game-servers .badge {
+        font-size: 12px;
+        padding: 4px 8px;
+      }
+
+      /* Title: allow ellipsis instead of pushing width */
+      #game-servers .gs-title,
+      #game-servers .gs-card-header .gs-title {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      /* MOTD: slightly smaller on tiny screens so it breathes */
+      #game-servers #mc-motd,
+      #game-servers #asa-motd {
+        font-size: 13px;
+        line-height: 1.25;
+      }
+    }
+
+    /* Offline worker "remove" (hide) button */
+    .wstatus{ display:flex; align-items:center; justify-content:flex-start;
+      gap:8px; }
+
+    .wremove{
+      -webkit-appearance: none;
+      appearance: none;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.07);
+
+      color: #ff5a5f;
+font-size: 12px;
+      line-height: 1;
+      padding: 4px 10px;
+      border-radius: 999px;
+      cursor: pointer;
+      user-select: none;
+      transition: background .15s ease, border-color .15s ease, transform .05s ease;
+    }
+    .wremove:hover{
+      background: rgba(255,255,255,0.11);
+      border-color: rgba(255,255,255,0.22);
+    }
+    .wremove:active{ transform: translateY(1px); }
+    .wremove:focus{ outline: none; box-shadow: 0 0 0 2px rgba(255,255,255,0.10); }
+
+    [data-theme="light"] .wremove{
+      border: 1px solid rgba(0,0,0,0.14);
+      background: rgba(0,0,0,0.05);
+      color: rgba(0,0,0,0.65);
+    }
+    [data-theme="light"] .wremove:hover{
+      background: rgba(0,0,0,0.08);
+      border-color: rgba(0,0,0,0.22);
+    }
+    [data-theme="light"] .wremove:focus{ box-shadow: 0 0 0 2px rgba(0,0,0,0.10); }
 
 </style>
 
@@ -446,9 +617,7 @@
       <div class="gs-header">
         <div class="gs-hleft">
           <span class="gs-dot gs-gray" id="mc-dot"></span>
-          <span>Minecraft (PaperMC)</span>
-          <span class="gs-pill gs-mono" id="mc-lat">-- ms</span>
-        </div>
+          <span>Minecraft (PaperMC)</span></div>
         <button class="gs-btn" type="button" data-toggle="mc-flyout">Details</button>
       </div>
 
@@ -464,9 +633,7 @@
       <div class="gs-header">
         <div class="gs-hleft">
           <span class="gs-dot gs-gray" id="asa-dot"></span>
-          <span>ARK: Survival Ascended (Cluster)</span>
-          <span class="gs-pill gs-mono" id="asa-total">-- players</span>
-        </div>
+          <span>ARK: Survival Ascended (Cluster)</span></div>
         <button class="gs-btn" type="button" data-toggle="asa-flyout">Details</button>
       </div>
 
@@ -561,21 +728,65 @@
       : `<span class="pill"><span class="dot bad"></span>offline</span>`;
   }
 
+
+  /* ---- Per-browser hide for offline workers (reappears if worker comes back online) ---- */
+  const HIDDEN_WORKERS_KEY = "earthican_hidden_workers_v1";
+
+  function escAttr2(s){
+    return String(s ?? "")
+      .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+      .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+  }
+
+  function loadHiddenWorkers(){
+    try { return JSON.parse(localStorage.getItem(HIDDEN_WORKERS_KEY) || "{}") || {}; }
+    catch(e){ return {}; }
+  }
+  function saveHiddenWorkers(obj){
+    try { localStorage.setItem(HIDDEN_WORKERS_KEY, JSON.stringify(obj || {})); } catch(e){}
+  }
+  function isHiddenWorker(hidden, miner, workerFull){
+    const arr = hidden?.[miner];
+    return Array.isArray(arr) && arr.includes(workerFull);
+  }
+
+  /* Called by the Remove button */
+  function hideWorker(btn){
+    const miner = btn?.dataset?.miner || "";
+    const worker = btn?.dataset?.worker || "";
+    if (!miner || !worker) return;
+
+    const hidden = loadHiddenWorkers();
+    hidden[miner] = Array.isArray(hidden[miner]) ? hidden[miner] : [];
+    if (!hidden[miner].includes(worker)) hidden[miner].push(worker);
+    saveHiddenWorkers(hidden);
+
+    /* immediate UI feedback */
+    const row = btn.closest(".workerRow");
+    if (row) row.remove();
+  }
+
   function workerPanelHTML(minerUsername, workers){
     if (!workers || !workers.length) return "";
     const prefix = minerUsername + ".";
-    const rows = workers.map(w => {
+    
+    const hidden = loadHiddenWorkers();const rows = workers.map(w => {
       const on = isOnlineFromLastshare(w.lastshare);
-      const short = (w.name || "").startsWith(prefix) ? w.name.slice(prefix.length) : (w.name || "");
+      
+      const full = (w.name || "");
+      if (!on && isHiddenWorker(hidden, minerUsername, full)) return "";const short = (w.name || "").startsWith(prefix) ? w.name.slice(prefix.length) : (w.name || "");
       return `
         <div class="workerRow">
           <div class="wname">${short}</div>
           <div class="wcell">${formatHashrate(w.hashrate1m_hs)}</div>
           <div class="wcell">${fmtAgeFromTs(w.lastshare)} ago</div>
-          <div class="wstatus">${badge(on)}</div>
+          <div class="wstatus">
+            ${badge(on)}
+            ${!on ? `<button class="wremove" type="button" data-miner="${escAttr2(minerUsername)}" data-worker="${escAttr2(full)}" onclick="hideWorker(this)">remove</button>` : ""}
+          </div>
         </div>
       `;
-    }).join("");
+    }).filter(Boolean).join("");
 
     return `
       <div class="workerPanel">
@@ -829,8 +1040,7 @@ function gsSetDot(el, state){
       gsSetDot(document.getElementById("asa-dot"), online > 0 ? "green" : "red");
       gsText("asa-online", `${online}/${total}`);
       gsText("asa-players", totalPlayers);
-      gsText("asa-total", `${totalPlayers} players`);
-
+// removed header pill: asa-total
       const list = document.getElementById("asa-list");
       if (list){
         list.innerHTML = "";
