@@ -368,6 +368,12 @@ font-size: 12px;
     }
     [data-theme="light"] .wremove:focus{ box-shadow: 0 0 0 2px rgba(0,0,0,0.10); }
 
+/* ASA list header + columns */
+#game-servers #asa-head{display:flex;justify-content:space-between;align-items:flex-end;margin:6px 0 8px;opacity:.75;font-size:.80em}
+#game-servers #asa-head .right{display:grid;grid-auto-flow:column;gap:14px}
+#game-servers #asa-head .lbl{min-width:72px;text-align:right}
+#game-servers #asa-list .gs-row .right{display:grid;grid-auto-flow:column;gap:14px;align-items:center}
+#game-servers #asa-list .gs-row .right span{min-width:72px;text-align:right}
 </style>
 
   
@@ -483,7 +489,6 @@ font-size: 12px;
 
     #game-servers .gs-ver {
 
-    /* Per-map row layout: prevent right side from getting squeezed on mobile */
     #game-servers #asa-list .gs-row{
       display: grid;
       grid-template-columns: 1fr auto;
@@ -530,7 +535,13 @@ font-size: 12px;
       -webkit-box-orient: vertical;
       overflow: hidden;
     }
-  </style>
+  /* ASA list header + columns */
+#game-servers #asa-head{display:flex;justify-content:space-between;align-items:flex-end;margin:6px 0 8px;opacity:.75;font-size:.80em}
+#game-servers #asa-head .right{display:grid;grid-auto-flow:column;gap:14px}
+#game-servers #asa-head .lbl{min-width:72px;text-align:right}
+#game-servers #asa-list .gs-row .right{display:grid;grid-auto-flow:column;gap:14px;align-items:center}
+#game-servers #asa-list .gs-row .right span{min-width:72px;text-align:right}
+</style>
 </head>
 
 <body>
@@ -642,8 +653,8 @@ font-size: 12px;
       <div class="gs-row gs-motd"><div class="gs-sub">MOTD</div><div class="right gs-wrap" id="asa-motd">--</div></div>
 
       <div class="gs-flyout" id="asa-flyout">
-        <div class="gs-sub" style="margin: 6px 0 8px;">Per-map</div>
-        <div id="asa-list"></div>
+        <div id="asa-head"><div class="gs-sub">Map</div><div class="right gs-mono"><span class="lbl">Players</span><span class="lbl">Ping</span></div></div>
+<div id="asa-list"></div>
       </div>
     </div>
   </div>
@@ -1007,7 +1018,7 @@ function gsSetDot(el, state){
 
   function gsMs(ms){
     if (ms === null || ms === undefined) return "-- ms";
-    return `${Math.round(ms * 10) / 10} ms`;
+    return `${Math.round(ms)} ms`;
   }
 
   async function loadServerStatus(){
@@ -1053,7 +1064,16 @@ function gsSetDot(el, state){
           left.innerHTML = `<span class="gs-dot ${inst.online ? "gs-green" : "gs-red"}"></span> <span class="gs-mono">${(inst.name || "?")}${vTag}</span>`;
           const right = document.createElement("div");
           right.className = "gs-mono right";
-          right.textContent = inst.online ? `${inst.players_online ?? 0} (${gsMs(inst.latency_ms ?? null)})` : "offline";
+          if (inst.online) {
+            const p = document.createElement("span");
+            p.textContent = String(inst.players_online ?? 0);
+            const ms = document.createElement("span");
+            ms.textContent = gsMs(inst.latency_ms ?? null);
+            right.appendChild(p);
+            right.appendChild(ms);
+          } else {
+            right.textContent = "offline";
+          }
           row.appendChild(left);
           row.appendChild(right);
           list.appendChild(row);
