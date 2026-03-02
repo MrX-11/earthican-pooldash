@@ -20,3 +20,11 @@ venv/
 
 # local data (adjust if you actually want tracked)
 data/
+data/*.json
+
+# secrets
+.env
+.env.*
+*.pem
+*.key
+id_ed25519*
