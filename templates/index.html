@@ -376,6 +376,42 @@ font-size: 12px;
 
   /* CHART+MINERS LAYOUT OVERRIDES */
 
+  /* --- POLISH: Chart card tighter --- */
+  #pool-hashrate-chart .card{
+    padding: 8px;            /* was 12px */
+    border-radius: 14px;
+  }
+  /* Reduce extra space between title and chart card */
+  #pool-hashrate-title{ margin: 14px 0 8px; } /* was ~18/10 */
+  /* Reduce space between button row and plot */
+  #pool-hashrate-chart .card-header{ padding: 0; margin: 0 0 6px 0; }
+  /* Optional: remove any default padding around the plot container */
+  #hr-chart{ margin: 0; }
+
+
+  /* --- MOBILE MINERS CARD FIX --- */
+  @media (max-width: 520px){
+    /* Less “squish”: reduce outer padding */
+    .wrap { padding: 12px; }
+
+    /* Miner cards: stack meta items to 1 column */
+    .mmeta { grid-template-columns: 1fr !important; }
+
+    /* Slightly tighter card padding so content fits */
+    .mcard { padding: 10px; }
+
+    /* Allow miner name row to wrap nicely */
+    .mrow { flex-wrap: wrap; }
+    .mname { max-width: 100%; }
+
+    /* Search bar should not span the whole card width visually */
+    #miners input.search{
+      width: 100%;
+      max-width: 420px;
+    }
+  }
+
+
   /* --- POLISH: Workers toggle button --- */
   #miners .workerToggle{
     background: var(--chip);
@@ -804,24 +840,61 @@ font-size: 12px;
 
   function makeOpts(){
     const cs = getComputedStyle(document.documentElement);
-    const colMuted = (cs.getPropertyValue("--muted") || "#9aa7b4").trim();
-    const colBorder = (cs.getPropertyValue("--border") || "rgba(255,255,255,.08)").trim();
     const theme = document.documentElement.getAttribute("data-theme") || "dark";
-    const colGrid = (theme === "light") ? "rgba(0,0,0,.045)" : "rgba(255,255,255,.045)";
+    const colMuted = (cs.getPropertyValue("--muted") || "#9aa7b4").trim();
     const accent = (cs.getPropertyValue("--accent") || "#6aa6ff").trim();
+
+    // dim grid slightly
+    const colGrid = (theme === "light") ? "rgba(0,0,0,.06)" : "rgba(255,255,255,.05)";
 
     return {
       width: el("hr-chart").clientWidth,
       height: 300,
+
+      // thinner “edges” inside the plot (top, right, bottom, left)
+      padding: [2, 3, 4, 2],
+
       scales: { x: { time: true }, y: { auto: true } },
+
       axes: [
-        { stroke: colMuted, grid: { stroke: colGrid }, ticks: { stroke: colGrid }, font: "12px system-ui" },
-        { stroke: colMuted, grid: { stroke: colGrid }, ticks: { stroke: colGrid }, font: "12px system-ui" },
+        {
+          stroke: colMuted,
+          grid:  { stroke: colGrid },
+          ticks: { stroke: colGrid },
+          font: "12px system-ui",
+          space: 26,
+
+          // TIME ONLY — viewer’s local time zone
+          rotate: 45,
+          size: 44,
+
+          // TIME ONLY — viewer’s local time zone (auto-skip on small widths)
+          values: (u, vals) => vals.map((ts, i) => {
+            const d = new Date(ts * 1000);
+            const label = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
+            const w = u && u.width ? u.width : 0;
+            const step = (w < 420) ? 4 : (w < 600) ? 3 : (w < 800) ? 2 : 1;
+            return (i % step) ? "" : label;
+          }),
+
+        },
+        {
+          stroke: colMuted,
+          grid:  { stroke: colGrid },
+          ticks: { stroke: colGrid },
+          font: "12px system-ui",
+          space: 30,
+
+          // TH/s ticks (your data is already scaled to TH/s in refresh())
+          values: (u, vals) => vals.map(v => (v == null || !isFinite(v)) ? "" : Number(v).toFixed(2)),
+        },
       ],
+
       series: [
         { label: "t" },
         { label: "hashrate", width: 2, stroke: accent, value: (_, v) => fmtHs(v) },
       ],
+
       legend: { show: false },
       cursor: { drag: { x: true, y: false } },
     };
@@ -987,8 +1060,7 @@ font-size: 12px;
     if (!isFinite(v)) return "—";
     let i = 0;
     while (v >= 1000 && i < UNITS.length - 1) { v /= 1000; i++; }
-    let dec = (v >= 100) ? 0 : (v >= 10) ? 1 : 2;
-    return `${v.toFixed(dec)} ${UNITS[i]}`;
+    return `${v.toFixed(2)} ${UNITS[i]}`;
   }
   function fmtInt(x){ return (x===null||x===undefined) ? "—" : String(x); }
 
