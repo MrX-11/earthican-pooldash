@@ -201,7 +201,6 @@
     /* --- FINAL VISIBILITY POLICY (cards always; table hidden) --- */
     table { display: none !important; }
     .mobileList { display: flex !important; }
-    }
 
 
     @media (max-width: 520px){
@@ -374,12 +373,164 @@ font-size: 12px;
 #game-servers #asa-head .lbl{min-width:72px;text-align:right}
 #game-servers #asa-list .gs-row .right{display:grid;grid-auto-flow:column;gap:14px;align-items:center}
 #game-servers #asa-list .gs-row .right span{min-width:72px;text-align:right}
+
+  /* CHART+MINERS LAYOUT OVERRIDES */
+
+  /* --- POLISH: Workers toggle button --- */
+  #miners .workerToggle{
+    background: var(--chip);
+    border: 1px solid var(--chipBorder);
+    color: var(--text);
+    padding: 8px 10px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 800;
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+  }
+  #miners .workerToggle:hover{ border-color: rgba(255,255,255,.18); }
+  [data-theme="light"] #miners .workerToggle:hover{ border-color: rgba(0,0,0,.18); }
+  #miners .workerChevron{ opacity:.8; }
+
+
+  /* --- POLISH: Collapsible miner cards --- */
+  #miners .minerHead{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    cursor:pointer;
+    user-select:none;
+    padding: 6px 2px;
+  }
+  #miners .minerHead:hover{
+    opacity: .95;
+  }
+  #miners .minerName{
+    font-weight: 850;
+    overflow:hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 78%;
+  }
+  #miners .minerChevron{
+    opacity:.75;
+    margin-right: 8px;
+    font-size: 14px;
+  }
+  #miners .minerDetails{
+    margin-top: 10px;
+  }
+
+
+  /* --- POLISH: Stronger active range button --- */
+  #hr-range .btn[aria-pressed="true"]{
+    border-color: rgba(255,255,255,.35);
+    background: rgba(255,255,255,.10);
+  }
+  [data-theme="light"] #hr-range .btn[aria-pressed="true"]{
+    border-color: rgba(0,0,0,.20);
+    background: rgba(0,0,0,.06);
+  }
+
+
+  /* --- POLISH: Miners card rhythm --- */
+  #miners .card { padding: 12px; }
+  #miners h2 { margin-top: 0; }               /* inside the card */
+  #miners input.search { margin-bottom: 16px; }
+
+
+  /* --- POLISH: Miners heading matches Game Servers --- */
+  #miners h2{
+    margin: 18px 0 10px;
+    font-size: 16px;
+    font-weight: 850;
+    letter-spacing: .2px;
+  }
+
+  /* --- POLISH: Search bar width + spacing (symmetry) --- */
+  #miners input.search{
+    width: 520px;
+    max-width: 100%;
+    margin: 0 0 14px 0;
+  }
+
+  /* --- POLISH: Chart range buttons state --- */
+  #hr-range .btn[aria-pressed="true"]{
+    border-color: rgba(255,255,255,.28);
+    box-shadow: 0 0 0 2px rgba(106,166,255,.12);
+  }
+  [data-theme="light"] #hr-range .btn[aria-pressed="true"]{
+    border-color: rgba(0,0,0,.18);
+    box-shadow: 0 0 0 2px rgba(36,92,255,.10);
+  }
+  #hr-range .btn[disabled]{
+    opacity: .35;
+    cursor: not-allowed;
+    filter: grayscale(1);
+  }
+
+
+  /* Make the existing miners container full-width under the chart */
+  #miners { width: 100%; max-width: 100%; flex: 0 0 100%; grid-column: 1 / -1; margin-top: 16px; }
+  
+
+  /* Full-width miners section */
+  #miners-section { width: 100%; max-width: 100%; flex: 0 0 100%; }
+  #miners-section .search { width: 100%; max-width: 100%; }
+  #miners-section > h2 { margin: 0 0 10px 0; }
+  #miners-section > input.search { margin: 0 0 14px 0; }
+
+  /* Force full-width row behavior (works even if parent uses flex, not grid) */
+  #pool-hashrate-chart,
+  #miners-section {
+    width: 100%;
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+  /* If parent is grid, keep this too */
+  #pool-hashrate-chart,
+  #miners-section {
+    grid-column: 1 / -1;
+  }
+
+  /* Put miners search UNDER the Miners heading (not on the right) */
+  #miners-section > h2 { margin-bottom: 10px; }
+  #miners-section > input.search {
+    display: block;
+    width: 100%;
+    max-width: 100%;   /* keeps it from looking comically wide on desktop */
+    margin: 0 0 14px 0; /* space before the miners list */
+  }
+
+  /* If the miners header is wrapped in a flex container, force vertical stacking */
+  #miners-section .header,
+  #miners-section .head,
+  #miners-section .miners-header,
+  #miners-section .miners-head {
+    display: block !important;
+  }
+
+  /* Make the chart card match spacing rhythm */
+  #pool-hashrate-chart { margin-top: 16px; }
+  #pool-hashrate-chart .card { margin: 0; }
+
 </style>
 
   
   <style id="game-server-styles">
     /* Game Servers module (namespaced; match mining card feel) */
     #game-servers { margin-top: 22px; }
+
+    .sec-title{
+      margin: 18px 0 10px;
+      font-size: 16px;
+      font-weight: 850;
+      letter-spacing: .2px;
+      color: var(--text);
+    }
 
     #game-servers .gs-title {
       margin: 18px 0 10px;
@@ -542,6 +693,10 @@ font-size: 12px;
 #game-servers #asa-list .gs-row .right{display:grid;grid-auto-flow:column;gap:14px;align-items:center}
 #game-servers #asa-list .gs-row .right span{min-width:72px;text-align:right}
 </style>
+  <link rel="stylesheet" href="/static/vendor/uplot/uPlot.min.css"/>
+  <script src="/static/vendor/uplot/uPlot.iife.min.js"></script>
+
+
 </head>
 
 <body>
@@ -596,10 +751,137 @@ font-size: 12px;
       </div>
     </div>
 
-    <div class="sectionTitle">
-      <h2>Miners</h2>
-      <input class="search" id="search" placeholder="Search miner or worker…" autocomplete="off"/>
+    <!-- BEGIN: Pool Hashrate Chart (added) -->
+<div class="sec-title" id="pool-hashrate-title">Pool Hashrate</div>
+<section id="pool-hashrate-chart" style="margin-top:16px; grid-column: 1 / -1;">
+  <div class="card">
+    <div class="card-header" style="display:flex;align-items:center;justify-content:flex-end;gap:12px;flex-wrap:wrap;">
+      <div id="hr-range" style="display:flex;gap:8px;justify-content:flex-end;flex:1;">
+        <button class="btn" data-window="3600" aria-pressed="false">1h</button>
+        <button class="btn" data-window="21600" aria-pressed="false">6h</button>
+        <button class="btn" data-window="86400" aria-pressed="true">24h</button>
+        <button class="btn" data-window="604800" aria-pressed="false">7d</button>
+        <button class="btn" data-window="2592000" aria-pressed="false">30d</button>
+        <button class="btn" data-window="31536000" aria-pressed="false">1y</button>
+      </div>
     </div>
+<div id="hr-chart" style="height:300px;width:100%;"></div>
+<script>
+(function(){
+  const el = (id) => document.getElementById(id);
+
+  let uplot = null;
+  let windowSec = 86400;
+
+
+  function setActiveRangeButton(sec){
+    const grp = el("hr-range");
+    if(!grp) return;
+    grp.querySelectorAll('button[data-window]').forEach(b => {
+      b.setAttribute("aria-pressed", (Number(b.dataset.window)===Number(sec)) ? "true" : "false");
+    });
+  }
+
+  function disableRangeButtons(availableSpanSec){
+    const grp = el("hr-range");
+    if(!grp) return;
+    grp.querySelectorAll('button[data-window]').forEach(b => {
+      const w = Number(b.dataset.window||0);
+      const ok = availableSpanSec >= (w * 0.60); // require 60% coverage
+      b.disabled = !ok;
+    });
+    // ensure current active stays consistent
+    setActiveRangeButton(windowSec);
+  }
+
+
+  function fmtHs(ths){
+    if (ths == null) return "—";
+    const v = Number(ths);
+    if (!isFinite(v)) return "—";
+    return `${v.toFixed(2)} TH/s`;
+  }
+
+  function makeOpts(){
+    const cs = getComputedStyle(document.documentElement);
+    const colMuted = (cs.getPropertyValue("--muted") || "#9aa7b4").trim();
+    const colBorder = (cs.getPropertyValue("--border") || "rgba(255,255,255,.08)").trim();
+    const theme = document.documentElement.getAttribute("data-theme") || "dark";
+    const colGrid = (theme === "light") ? "rgba(0,0,0,.045)" : "rgba(255,255,255,.045)";
+    const accent = (cs.getPropertyValue("--accent") || "#6aa6ff").trim();
+
+    return {
+      width: el("hr-chart").clientWidth,
+      height: 300,
+      scales: { x: { time: true }, y: { auto: true } },
+      axes: [
+        { stroke: colMuted, grid: { stroke: colGrid }, ticks: { stroke: colGrid }, font: "12px system-ui" },
+        { stroke: colMuted, grid: { stroke: colGrid }, ticks: { stroke: colGrid }, font: "12px system-ui" },
+      ],
+      series: [
+        { label: "t" },
+        { label: "hashrate", width: 2, stroke: accent, value: (_, v) => fmtHs(v) },
+      ],
+      legend: { show: false },
+      cursor: { drag: { x: true, y: false } },
+    };
+  }
+
+
+  async function refresh(){
+    const maxPoints = Math.max(600, Math.floor(el("hr-chart").clientWidth * 0.8));
+    const url = `/api/hashrate_history?window=${windowSec}&max_points=${maxPoints}`;
+    try{
+      const r = await fetch(url, {cache:"no-store"});
+      const d = await r.json();
+      const t = (d.t || []).map(Number);
+      const hsRaw = (d.hs_1m || []).map(Number);
+      const hs = hsRaw.map(v => v/1e12);
+
+
+      if (!uplot){
+        uplot = new uPlot(makeOpts(), [t, hs], el("hr-chart"));
+      } else {
+        uplot.setData([t, hs]);
+        uplot.setSize({ width: el("hr-chart").clientWidth, height: 300 });
+      }
+    }catch(e){}
+  }
+
+  const grp = el("hr-range");
+  if (grp){
+    grp.querySelectorAll("button[data-window]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        grp.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed","false"));
+        btn.setAttribute("aria-pressed","true");
+        windowSec = Number(btn.dataset.window);
+        setActiveRangeButton(windowSec);
+        refresh();
+      });
+    });
+  }
+
+  let tmr=null;
+  window.addEventListener("resize", () => {
+    clearTimeout(tmr);
+    tmr=setTimeout(()=>{ if(uplot) uplot.setSize({width:el("hr-chart").clientWidth,height:300}); refresh(); },120);
+  });
+
+  refresh();
+  setInterval(refresh, 15000);
+})();
+</script>
+
+  </div>
+</section>
+<!-- END: Pool Hashrate Chart (added) -->
+
+
+      
+<div class="sec-title" id="miners-title">Miners</div>
+<section id="miners" style="grid-column: 1 / -1; margin-top:0;">
+  <div class="card">
+      <input class="search" id="search" placeholder="Search miner or worker…" autocomplete="off"/>
 
     <!-- Desktop table -->
     <table>
@@ -617,6 +899,9 @@ font-size: 12px;
 
     <!-- Mobile cards -->
     <div class="mobileList" id="mobileList"></div>
+  </div>
+</section>
+
 
 <div id="game-servers">
   <div class="gs-title">Game Servers</div>
@@ -837,6 +1122,15 @@ font-size: 12px;
 // Persist expanded miners so Workers doesn't auto-collapse on refresh
     const expandedMiners = new Set(); // usernames
 
+    const openWorkers = new Set(); // usernames with workers panel open
+
+    function toggleWorkers(username){
+      if (openWorkers.has(username)) openWorkers.delete(username);
+      else openWorkers.add(username);
+      if (lastSnap) render(lastSnap);
+    }
+
+
     function toggleMiner(username){
       if (expandedMiners.has(username)) expandedMiners.delete(username);
       else expandedMiners.add(username);
@@ -934,6 +1228,8 @@ font-size: 12px;
       `;
     }).join("");
 // Mobile cards
+    
+    // Mobile cards (collapsible)
     els.mobileList.innerHTML = miners.map(m => {
       const workers = m.workers_list || [];
       const minerOnline = isOnlineFromLastshare(m.lastshare);
@@ -942,27 +1238,36 @@ font-size: 12px;
       const isOpen = expandedMiners.has(m.username);
       const chev = isOpen ? "▾" : "▸";
 
+      // collapsed view: just name + status
+      // expanded view: show the full tiles + workers toggle
       return `
         <div class="mcard">
-          <div class="mrow">
-            <div class="mname">${m.username}</div>
+          <div class="minerHead" onclick="toggleMiner('${escAttr(m.username)}')">
+            <div style="display:flex;align-items:center;gap:8px;min-width:0;">
+              <span class="minerChevron">${chev}</span>
+              <div class="minerName">${m.username}</div>
+            </div>
             <div>${badge(minerOnline)}</div>
           </div>
-          <div class="mmeta">
-            <div class="kv"><div class="k">Hashrate (1m)</div><div class="v mono">${formatHashrate(m.hashrate1m_hs)}</div></div>
-            <div class="kv"><div class="k">Workers</div><div class="v mono">${onlineWorkers}/${m.workers ?? workers.length ?? 0}</div></div>
-            <div class="kv"><div class="k">Last share</div><div class="v mono">${fmtAgeFromTs(m.lastshare)} ago</div></div>
-            <div class="kv"><div class="k">Best share</div><div class="v mono">${m.bestshare ? Math.floor(m.bestshare).toString() : "—"}</div></div>
-          </div>
 
-          ${workers.length ? `
-            <div style="margin-top:10px;">
-              <button class="workerToggle" type="button" onclick="toggleMiner('${escAttr(m.username)}')">
-                <span class="workerChevron">${chev}</span>
-                Workers <span class="mono">${onlineWorkers}/${m.workers ?? workers.length}</span>
-              </button>
-              ${isOpen ? workerPanelHTML(m.username, workers) : ""}
-            </div>
+          ${isOpen ? `
+            <div class="minerDetails">
+              <div class="mmeta">
+                <div class="kv"><div class="k">Hashrate (1m)</div><div class="v mono">${formatHashrate(m.hashrate1m_hs)}</div></div>
+                <div class="kv"><div class="k">Workers</div><div class="v mono">${onlineWorkers}/${m.workers ?? workers.length ?? 0}</div></div>
+                <div class="kv"><div class="k">Last share</div><div class="v mono">${fmtAgeFromTs(m.lastshare)} ago</div></div>
+                <div class="kv"><div class="k">Best share</div><div class="v mono">${m.bestshare ? Math.floor(m.bestshare).toString() : "—"}</div></div>
+              </div>
+
+              ${workers.length ? `
+                <div style="margin-top:10px;">
+                  <button class="workerToggle" type="button" onclick="event.stopPropagation(); toggleWorkers('${escAttr(m.username)}')">
+                    <span class="workerChevron">${openWorkers.has(m.username) ? "▾" : "▸"}</span>
+                    Workers <span class="mono">${onlineWorkers}/${m.workers ?? workers.length}</span>
+                  </button>
+                  ${openWorkers.has(m.username) ? workerPanelHTML(m.username, workers) : ""}
+                </div>
+              ` : ``}</div>
           ` : ``}
         </div>
       `;
