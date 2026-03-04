@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Miner Chart</title>
+  <link rel="stylesheet" href="/static/vendor/uplot/uPlot.min.css"/>
+  <style>
+    html,body{height:100%;margin:0;background:#0b1118;color:#e6eef5;font:14px system-ui;}
+    .wrap{display:flex;flex-direction:column;height:100%;gap:10px;padding:12px;box-sizing:border-box;}
+    .top{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .title{font-weight:800}
+    .sp{flex:1}
+    select,button{background:transparent;color:inherit;border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:6px 10px}
+    #chart{flex:1;min-height:280px}
+  
+    /* --- Themed range dropdown --- */
+    #range{
+      -webkit-appearance:none;
+      -moz-appearance:none;
+      appearance:none;
+
+      background:#0f1622;
+      color:#e6eef5;
+      border:1px solid rgba(255,255,255,.15);
+
+      padding:6px 30px 6px 10px;
+      border-radius:10px;
+      font:600 12px system-ui;
+      line-height:1.1;
+      outline:none;
+
+      background-image:
+        linear-gradient(45deg, transparent 50%, rgba(230,238,245,.72) 50%),
+        linear-gradient(135deg, rgba(230,238,245,.72) 50%, transparent 50%);
+      background-position: calc(100% - 14px) 50%, calc(100% - 9px) 50%;
+      background-size:6px 6px, 6px 6px;
+      background-repeat:no-repeat;
+    }
+    #range:focus{ box-shadow:0 0 0 2px rgba(106,166,255,.20); border-color:#6aa6ff; }
+    #range option{ background:#0b1118; color:#e6eef5; }
+
+
+    #worker{
+      -webkit-appearance:none;
+      -moz-appearance:none;
+      appearance:none;
+
+      background:#0f1622;
+      color:#e6eef5;
+      border:1px solid rgba(255,255,255,.15);
+
+      padding:6px 30px 6px 10px;
+      border-radius:10px;
+      font:600 12px system-ui;
+      line-height:1.1;
+      outline:none;
+
+      background-image:
+        linear-gradient(45deg, transparent 50%, rgba(230,238,245,.72) 50%),
+        linear-gradient(135deg, rgba(230,238,245,.72) 50%, transparent 50%);
+      background-position: calc(100% - 14px) 50%, calc(100% - 9px) 50%;
+      background-size:6px 6px, 6px 6px;
+      background-repeat:no-repeat;
+    }
+    #worker:focus{ box-shadow:0 0 0 2px rgba(106,166,255,.20); border-color:#6aa6ff; }
+    #worker option{ background:#0b1118; color:#e6eef5; }
+
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="title">{{ username }}{% if worker %} · {{ worker }}{% else %} · Total{% endif %}</div>
+    <div class="sp"></div>
+    <label>Range:</label>
+    <select id="range">
+      <option value="3600">1h</option>
+      <option value="21600" selected>6h</option>
+      <option value="86400">24h</option>
+      <option value="604800">7d</option>
+      <option value="2592000">30d</option>
+      <option value="31536000">1y</option>
+    </select>
+    <label>Worker:</label>
+    <select id="worker">
+      <option value="">Total</option>
+    </select>
+  </div>
+  <div id="chart"></div>
+</div>
+
+<script src="/static/vendor/uplot/uPlot.iife.min.js"></script>
+<script>
+(() => {
+  const username = {{ username|tojson }};
+  const worker = {{ worker|tojson }};
+  let windowSec = Number({{ window|tojson }}) || 21600;
+  const rangeSel = document.getElementById("range");
+
+  const workerSel = document.getElementById("worker");
+
+  function escOpt(s){
+    return String(s ?? "")
+      .replace(/&/g,"&amp;")
+      .replace(/</g,"&lt;")
+      .replace(/>/g,"&gt;")
+      .replace(/"/g,"&quot;");
+  }
+
+  async function buildWorkerMenu(){
+    if (!workerSel) return;
+    try{
+      const snap = await fetch("/api/snapshot", { cache: "no-store" }).then(r => r.json());
+      const miners = snap.miners || [];
+      const m = miners.find(x => (x.username || "") === username);
+      const workers = (m && m.workers_list) ? m.workers_list : [];
+
+      const prefix = username + ".";
+      const opts = workers
+        .map(w => {
+          const full = (w.name || "");
+          const short = full.startsWith(prefix) ? full.slice(prefix.length) : full;
+          const label = (short || full || "worker");
+          return { full, label };
+        })
+        .sort((a,b) => a.label.localeCompare(b.label, undefined, { sensitivity: "base" }));
+
+      workerSel.innerHTML =
+        '<option value="">Total</option>' +
+        opts.map(o => `<option value="${escOpt(o.full)}">${escOpt(o.label)}</option>`).join("");
+
+      // restore current worker selection
+      workerSel.value = (worker || "");
+    } catch(e){
+      // leave Total-only
+    }
+  }
+
+  function updateUrl(){
+    const u = new URL(window.location.href);
+    u.searchParams.set("window", String(windowSec));
+
+    const w = workerSel ? (workerSel.value || "") : "";
+    if (w) u.searchParams.set("worker", w);
+    else u.searchParams.delete("worker");
+
+    window.location.href = u.toString();
+  }
+
+  if (rangeSel) rangeSel.value = String(windowSec);
+  if (rangeSel) rangeSel.addEventListener("change", () => { windowSec = Number(rangeSel.value||0) || windowSec; updateUrl(); });
+  if (workerSel) workerSel.addEventListener("change", () => updateUrl());
+  buildWorkerMenu();
+
+  function toTHS(hs){ const v=Number(hs); return isFinite(v)?(v/1e12):0; }
+
+  function makeOpts(){
+    return {
+      width: document.getElementById("chart").clientWidth,
+      height: document.getElementById("chart").clientHeight,
+      padding: [6, 10, 50, 10],
+      scales: { x: { time: true }, y: { auto: true } },
+      axes: [
+        {
+          stroke: "rgba(230,238,245,.85)",
+          grid: { stroke: "rgba(255,255,255,.06)" },
+          ticks:{ stroke: "rgba(255,255,255,.06)" },
+          font: "12px system-ui",
+          rotate: 45,
+          size: 60,
+          splits: (u, axisIdx, min, max) => {
+            const span = max - min, day=86400;
+            let step = 2*3600;
+            if (span > 2*day) step = day;
+            if (span > 14*day) step = 2*day;
+            if (span > 45*day) step = 7*day;
+            if (span > 180*day) step = 30*day;
+            const first = Math.ceil(min/step)*step;
+            const out=[];
+            for(let t=first;t<=max;t+=step) out.push(t);
+            return out;
+          },
+          values: (u, vals) => {
+            const span = u.scales.x.max - u.scales.x.min, day=86400;
+            return vals.map(ts => {
+              const d=new Date(ts*1000);
+              if (span > 2*day) return d.toLocaleDateString([], {month:"short", day:"2-digit"});
+              return d.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit", hour12:false});
+            });
+          }
+        },
+        {
+          stroke: "rgba(230,238,245,.85)",
+          grid: { stroke: "rgba(255,255,255,.06)" },
+          ticks:{ stroke: "rgba(255,255,255,.06)" },
+          font: "12px system-ui",
+          values: (u, vals) => vals.map(v => (v==null||!isFinite(v))?"":Number(v).toFixed(2)),
+        }
+      ],
+      series: [{label:"t"}, {label:"TH/s", stroke:"#6aa6ff", width:2}],
+      legend: {show:false},
+      cursor: {drag:{x:true,y:false}},
+    };
+  }
+
+  let u = null;
+
+  async function fetchSeries(){
+    const maxPoints = Math.max(600, Math.floor(document.getElementById("chart").clientWidth * 0.9));
+    let url = `/api/miner_history/${encodeURIComponent(username)}?window=${windowSec}&max_points=${maxPoints}`;
+    if (worker) url += `&worker=${encodeURIComponent(worker)}`;
+    const r = await fetch(url, {cache:"no-store"});
+    const d = await r.json();
+    const t = (d.t||[]).map(Number);
+    const hs = (d.hs||[]).map(Number).map(toTHS);
+    return [t, hs];
+  }
+
+  async function refresh(){
+    const [t, hs] = await fetchSeries();
+    const el = document.getElementById("chart");
+    if (!u){
+      u = new uPlot(makeOpts(), [t, hs], el);
+    } else {
+      u.setData([t, hs]);
+      u.setSize({width: el.clientWidth, height: el.clientHeight});
+    }
+  }
+
+  rangeSel?.addEventListener("change", () => {
+    windowSec = Number(rangeSel.value||21600);
+    refresh();
+  });
+
+  window.addEventListener("resize", () => {
+    if (!u) return;
+    const el=document.getElementById("chart");
+    u.setSize({width: el.clientWidth, height: el.clientHeight});
+  });
+
+  refresh();
+  setInterval(refresh, 15000);
+})();
+</script>
+</body>
+</html>

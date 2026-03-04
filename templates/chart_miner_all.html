@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Miner Charts</title>
+  <link rel="stylesheet" href="/static/vendor/uplot/uPlot.min.css"/>
+  <style>
+    :root{
+      --bg:#0b1118; --fg:#e6eef5; --muted:rgba(230,238,245,.72);
+      --grid:rgba(255,255,255,.06); --border:rgba(255,255,255,.15);
+      --accent:#6aa6ff;
+    }
+    html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);font:14px system-ui;}
+    .wrap{display:flex;flex-direction:column;height:100%;gap:10px;padding:12px;box-sizing:border-box;}
+    .top{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .title{font-weight:900}
+    .sp{flex:1}
+    select,button,label{
+      background:transparent;color:inherit;border:1px solid var(--border);
+      border-radius:10px;padding:6px 10px
+    }
+    label{border:none;padding:0}
+    .grid{
+      flex:1;
+      display:grid;
+      grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+      gap:12px;
+      align-content:start;
+      overflow:auto;
+      padding-bottom:6px;
+    }
+    .card{
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:10px;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      background:rgba(255,255,255,.02);
+      min-height:260px;
+    }
+    .hdr{display:flex; gap:10px; align-items:center; flex-wrap:wrap;}
+    .name{font-weight:900; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:100%;}
+    .sub{color:var(--muted); font-size:12px;}
+    .chart{flex:1; min-height:220px;}
+    .err{color:#ffb4b4;font-size:12px;white-space:pre-wrap}
+  
+    /* --- Themed range dropdown --- */
+    #range{
+      -webkit-appearance:none;
+      -moz-appearance:none;
+      appearance:none;
+
+      background: rgba(255,255,255,.04);
+      color: var(--fg);
+      border:1px solid var(--border);
+
+      padding:6px 30px 6px 10px;
+      border-radius:10px;
+      font:600 12px system-ui;
+      line-height:1.1;
+      outline:none;
+
+      background-image:
+        linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+        linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+      background-position: calc(100% - 14px) 50%, calc(100% - 9px) 50%;
+      background-size:6px 6px, 6px 6px;
+      background-repeat:no-repeat;
+    }
+    #range:focus{ box-shadow:0 0 0 2px rgba(106,166,255,.20); border-color:var(--accent); }
+    #range option{ background: var(--bg); color: var(--fg); }
+
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="title">{{ username }} · All charts</div>
+    <div class="sp"></div>
+
+    <label for="range">Range:</label>
+    <select id="range">
+      <option value="3600">1h</option>
+      <option value="21600">6h</option>
+      <option value="86400">24h</option>
+      <option value="604800">7d</option>
+      <option value="2592000">30d</option>
+      <option value="31536000">1y</option>
+    </select>
+
+    <button id="refreshNow" type="button">Refresh</button>
+  </div>
+
+  <div class="grid" id="grid"></div>
+</div>
+
+<script src="/static/vendor/uplot/uPlot.iife.min.js"></script>
+<script>
+(() => {
+  const username = {{ username|tojson }};
+  let windowSec = Number({{ window|tojson }}) || 21600;
+
+  const grid = document.getElementById("grid");
+  const rangeSel = document.getElementById("range");
+  const btnRefresh = document.getElementById("refreshNow");
+  if (rangeSel) rangeSel.value = String(windowSec);
+
+  const plots = new Map();    // key -> uPlot
+  const lastData = new Map(); // key -> [t, ths]
+
+  function toTHS(hs){ const v=Number(hs); return isFinite(v)?(v/1e12):0; }
+
+  function shortName(full){
+    const pref = username + ".";
+    return full && full.startsWith(pref) ? full.slice(pref.length) : full;
+  }
+
+  function xSplits(span){
+    const day=86400;
+    let step = 2*3600;
+    if (span > 2*day) step = day;
+    if (span > 14*day) step = 2*day;
+    if (span > 45*day) step = 7*day;
+    if (span > 180*day) step = 30*day;
+    return step;
+  }
+
+  function makeOpts(el){
+    return {
+      width: el.clientWidth,
+      height: el.clientHeight,
+      padding: [6, 10, 56, 10],
+      scales: { x: { time: true }, y: { auto: true } },
+      axes: [
+        {
+          stroke: "rgba(230,238,245,.85)",
+          grid: { stroke: "rgba(255,255,255,.06)" },
+          ticks:{ stroke: "rgba(255,255,255,.06)" },
+          font: "12px system-ui",
+          rotate: 45,
+          size: 64,
+          splits: (u, axisIdx, min, max) => {
+            const span = max - min;
+            const step = xSplits(span);
+            const first = Math.ceil(min/step)*step;
+            const out=[];
+            for(let t=first;t<=max;t+=step) out.push(t);
+            return out;
+          },
+          values: (u, vals) => {
+            const span = u.scales.x.max - u.scales.x.min;
+            const day=86400;
+            return vals.map(ts => {
+              const d=new Date(ts*1000);
+              if (span > 2*day) return d.toLocaleDateString([], {month:"short", day:"2-digit"});
+              return d.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit", hour12:false});
+            });
+          }
+        },
+        {
+          stroke: "rgba(230,238,245,.85)",
+          grid: { stroke: "rgba(255,255,255,.06)" },
+          ticks:{ stroke: "rgba(255,255,255,.06)" },
+          font: "12px system-ui",
+          values: (u, vals) => vals.map(v => (v==null||!isFinite(v))?"":Number(v).toFixed(2)),
+        }
+      ],
+      series: [{label:"t"}, {label:"TH/s", stroke:"#6aa6ff", width:2}],
+      legend: {show:false},
+      cursor: {drag:{x:true,y:false}},
+    };
+  }
+
+  async function fetchSnapshot(){
+    const r = await fetch("/api/snapshot", {cache:"no-store"});
+    if (!r.ok) throw new Error("snapshot fetch failed");
+    return await r.json();
+  }
+
+  async function fetchSeries(workerFull){
+    const maxPoints = Math.max(800, Math.floor((window.innerWidth||1200) * 1.0));
+    let url = `/api/miner_history/${encodeURIComponent(username)}?window=${windowSec}&max_points=${maxPoints}`;
+    if (workerFull) url += `&worker=${encodeURIComponent(workerFull)}`;
+    const r = await fetch(url, {cache:"no-store"});
+    if (!r.ok) return [[],[]];
+    const d = await r.json();
+    const t = (d.t||[]).map(Number);
+    const hs = (d.hs||[]).map(Number).map(toTHS);
+    return [t, hs];
+  }
+
+  function chartIdForKey(k){
+    return "c_" + btoa(unescape(encodeURIComponent(k || "__TOTAL__"))).replace(/=+$/,"").replace(/[+/]/g,"_");
+  }
+  function chartElForKey(k){ return document.getElementById(chartIdForKey(k)); }
+
+  function buildCards(keys){
+    grid.innerHTML = keys.map(k => {
+      const label = (k === "") ? "Total" : shortName(k);
+      const id = chartIdForKey(k);
+      return `
+        <div class="card" data-key="${k}">
+          <div class="hdr">
+            <div style="min-width:0">
+              <div class="name">${label}</div>
+              <div class="sub">${k ? k : username}</div>
+            </div>
+          </div>
+          <div class="chart" id="${id}"></div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  async function refreshAll(){
+    try{
+      const snap = await fetchSnapshot();
+      const miner = (snap.miners||[]).find(m => (m.username||"") === username);
+      const workers = (miner && miner.workers_list) ? miner.workers_list : [];
+
+      let keys = workers.map(w => (w.name||"")).filter(Boolean);
+      keys = keys.sort((a,b) => shortName(a).localeCompare(shortName(b), undefined, {sensitivity:"base"}));
+      keys = ["", ...keys];
+
+      if (grid.children.length !== keys.length){
+        plots.forEach(u => { try{u.destroy();}catch(e){} });
+        plots.clear();
+        buildCards(keys);
+      }
+
+      for (const k of keys){
+        const el = chartElForKey(k);
+        if (!el) continue;
+
+        const [t, hs] = await fetchSeries(k);
+        lastData.set(k, [t, hs]);
+
+        const prev = plots.get(k);
+        if (!prev){
+          plots.set(k, new uPlot(makeOpts(el), [t, hs], el));
+        } else {
+          prev.setData([t, hs]);
+          prev.setSize({width: el.clientWidth, height: el.clientHeight});
+        }
+      }
+    } catch(e){
+      grid.innerHTML = `<div class="card"><div class="name">Error</div><div class="err">${String(e)}</div></div>`;
+    }
+  }
+
+  rangeSel?.addEventListener("change", () => {
+    windowSec = Number(rangeSel.value||21600);
+    refreshAll();
+  });
+  btnRefresh?.addEventListener("click", () => refreshAll());
+
+  let rt=null;
+  window.addEventListener("resize", () => {
+    clearTimeout(rt);
+    rt=setTimeout(() => {
+      for (const [k,u] of plots.entries()){
+        const el = chartElForKey(k);
+        if (!el) continue;
+        u.setSize({width: el.clientWidth, height: el.clientHeight});
+        const d = lastData.get(k);
+        if (d) u.setData(d);
+      }
+    }, 120);
+  });
+
+  refreshAll();
+  setInterval(refreshAll, 15000);
+})();
+</script>
+</body>
+</html>

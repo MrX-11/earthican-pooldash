@@ -376,6 +376,77 @@ font-size: 12px;
 
   /* CHART+MINERS LAYOUT OVERRIDES */
 
+/* MINI MINER CHART */
+#miners .miniChartWrap{
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
+}
+#miners .miniChartHead{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-bottom: 8px;
+}
+
+
+.miniActions{ display:flex; gap:6px; align-items:center; margin-left:auto; }
+.miniPop{
+  border:1px solid var(--border, rgba(255,255,255,.12));
+  background: transparent;
+  color: var(--text, #e6eef5);
+  border-radius: 10px;
+  padding: 4px 8px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: .9;
+}
+.miniPop:hover{ opacity: 1; }
+
+#miners .miniSelect,
+#miners .miniRange{
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  font-size: 13px;
+  max-width: 100%;
+}
+
+/* miniSelect/miniRange themed extras */
+#miners .miniSelect,
+#miners .miniRange{
+  -webkit-appearance:none;
+  -moz-appearance:none;
+  appearance:none;
+  padding-right: 30px;
+
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position: calc(100% - 14px) 50%, calc(100% - 9px) 50%;
+  background-size: 6px 6px, 6px 6px;
+  background-repeat:no-repeat;
+}
+
+#miners .miniSelect option,
+#miners .miniRange option{
+  background: var(--panel);
+  color: var(--text);
+}
+
+#miners .miniChart{
+  height: 180px;
+  width: 100%;
+}
+#miners .miniHint{
+  color: var(--muted);
+  font-size: 12px;
+}
+
   /* --- POLISH: Chart card tighter --- */
   #pool-hashrate-chart .card{
     padding: 8px;            /* was 12px */
@@ -413,7 +484,23 @@ font-size: 12px;
 
 
   /* --- POLISH: Workers toggle button --- */
-  #miners .workerToggle{
+  #miners .chartToggle{
+    background: var(--chip);
+    border: 1px solid var(--chipBorder);
+    color: var(--text);
+    padding: 8px 10px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 800;
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+  }
+  #miners .chartToggle:hover{ border-color: rgba(255,255,255,.18); }
+  [data-theme="light"] #miners .chartToggle:hover{ border-color: rgba(0,0,0,.18); }
+
+#miners .workerToggle{
     background: var(--chip);
     border: 1px solid var(--chipBorder);
     color: var(--text);
@@ -864,19 +951,38 @@ font-size: 12px;
           font: "12px system-ui",
           space: 26,
 
-          // TIME ONLY — viewer’s local time zone
+          // Keep 45° labels for readability on multi-day ranges
           rotate: 45,
-          size: 44,
+          size: 60,
 
-          // TIME ONLY — viewer’s local time zone (auto-skip on small widths)
-          values: (u, vals) => vals.map((ts, i) => {
-            const d = new Date(ts * 1000);
-            const label = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
-            const w = u && u.width ? u.width : 0;
-            const step = (w < 420) ? 4 : (w < 600) ? 3 : (w < 800) ? 2 : 1;
-            return (i % step) ? "" : label;
-          }),
+          // Choose "reasonable" tick spacing based on visible span
+          splits: (u, axisIdx, min, max) => {
+            const span = max - min;           // seconds
+            const day  = 86400;
 
+            let step = 2 * 3600;              // <= ~2d: every 2 hours
+            if (span > 2 * day)  step = day;  // >2d: daily
+            if (span > 14 * day) step = 2*day;// >2w: every 2 days
+            if (span > 45 * day) step = 7*day;// >45d: weekly
+
+            const first = Math.ceil(min / step) * step;
+            const out = [];
+            for (let t = first; t <= max; t += step) out.push(t);
+            return out;
+          },
+
+          // Format time for short spans, date for multi-day spans
+          values: (u, vals) => {
+            const span = (u.scales.x.max - u.scales.x.min);
+            const day  = 86400;
+            return vals.map(ts => {
+              const d = new Date(ts * 1000);
+              if (span > 2 * day) {
+                return d.toLocaleDateString([], { month: "short", day: "2-digit" });
+              }
+              return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
+            });
+          },
         },
         {
           stroke: colMuted,
@@ -1195,8 +1301,151 @@ font-size: 12px;
     const expandedMiners = new Set(); // usernames
 
     const openWorkers = new Set(); // usernames with workers panel open
+    const openCharts = new Set(); // usernames with chart open
 
-    function toggleWorkers(username){
+    function toggleChart(username){
+      if (openCharts.has(username)) openCharts.delete(username);
+      else openCharts.add(username);
+      if (lastSnap) render(lastSnap);
+    }
+
+
+    
+
+    // --- MINI MINER CHARTS (mobile) ---
+    const miniPlots = new Map(); // username -> uPlot instance
+
+    const miniSelState = new Map(); // username -> selected workerFull (\"\" = Total)
+
+    // Mini chart range (seconds). Persist across refresh.
+    const MINI_RANGE_KEY = "earthican.miniRangeSec";
+    let miniWindowSec = Number(localStorage.getItem(MINI_RANGE_KEY) || "21600") || 21600; // default 6h
+
+    function setMiniRange(sec){
+      const v = Number(sec||0);
+      if (!isFinite(v) || v <= 0) return;
+      miniWindowSec = v;
+      try { localStorage.setItem(MINI_RANGE_KEY, String(v)); } catch(e){}
+    }
+
+    function toTHS(hs){ // hs in H/s -> TH/s
+      const v = Number(hs);
+      if (!isFinite(v)) return 0;
+      return v / 1e12;
+    }
+
+    async function fetchMinerSeries(username, windowSec, workerFull){
+      const day = 86400;
+      const w = Number(windowSec || 0);
+      const maxPoints =
+        (w <= 3600)        ? 300 :
+        (w <= 6*3600)      ? 500 :
+        (w <= day)         ? 900 :
+        (w <= 7*day)       ? 1500 :
+        (w <= 30*day)      ? 2500 : 5000;
+let url = `/api/miner_history/${encodeURIComponent(username)}?window=${windowSec}&max_points=${maxPoints}`;
+      if (workerFull) url += `&worker=${encodeURIComponent(workerFull)}`;
+      const r = await fetch(url, { cache: "no-store" });
+      if (!r.ok) return {t:[], hs:[]};
+      const d = await r.json();
+      return { t: (d.t||[]).map(Number), hs: (d.hs||[]).map(Number) };
+    }
+
+    function miniMakeOpts(container){
+      const cs = getComputedStyle(document.documentElement);
+      const theme = document.documentElement.getAttribute("data-theme") || "dark";
+      const colMuted = (cs.getPropertyValue("--muted") || "#9aa7b4").trim();
+      const accent = (cs.getPropertyValue("--accent") || "#6aa6ff").trim();
+      const colGrid = (theme === "light") ? "rgba(0,0,0,.06)" : "rgba(255,255,255,.05)";
+
+      return {
+        width: container.clientWidth,
+        height: 180,
+        padding: [4, 6, 14, 6],
+        scales: { x: { time: true }, y: { auto: true } },
+        axes: [
+          {
+            stroke: colMuted,
+            grid: { stroke: colGrid },
+            ticks: { stroke: colGrid },
+            font: "11px system-ui",
+            space: 30,
+            values: (u, vals) => vals.map(ts => {
+              const d = new Date(ts * 1000);
+              return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
+            }),
+          },
+          {
+            stroke: colMuted,
+            grid: { stroke: colGrid },
+            ticks: { stroke: colGrid },
+            font: "11px system-ui",
+            space: 40,
+            values: (u, vals) => vals.map(v => (v == null || !isFinite(v)) ? "" : Number(v).toFixed(2)),
+          },
+        ],
+        series: [
+          { label: "t" },
+          { label: "TH/s", stroke: accent, width: 2, value: (_, v) => (v==null||!isFinite(v)) ? "—" : `${Number(v).toFixed(2)} TH/s` },
+        ],
+        legend: { show: false },
+        cursor: { drag: { x: true, y: false } },
+      };
+    }
+
+    async function renderMiniMinerChart(username, workerFull){
+      const container = document.getElementById(`mini-${username}`);
+      if (!container) return;
+
+            const windowSec = miniWindowSec;
+      const data = await fetchMinerSeries(username, windowSec, workerFull);
+      const t = data.t;
+      const ths = data.hs.map(toTHS);
+
+      const prev0 = miniPlots.get(username);
+
+// If the miners list re-rendered, the DOM node is new; rebind uPlot
+if (prev0 && prev0.root !== container) {
+  try { prev0.destroy(); } catch(e){}
+  miniPlots.delete(username);
+}
+
+const prev = miniPlots.get(username);
+if (!prev){
+  const u = new uPlot(miniMakeOpts(container), [t, ths], container);
+  miniPlots.set(username, u);
+} else {
+  prev.setData([t, ths]);
+  prev.setSize({ width: container.clientWidth, height: 180 });
+}
+}
+
+    function loadMiniMinerChart(sel){
+      const wrap = sel.closest(".miniChartWrap");
+      const username = wrap?.dataset?.miner;
+      if (!username) return;
+      const workerFull = sel.value || "";
+      miniSelState.set(username, workerFull);
+      renderMiniMinerChart(username, workerFull);
+    }
+
+    // Pop out: current selected chart (Total or worker)
+    function popMiniCurrent(username){
+      const saved = miniSelState.has(username) ? (miniSelState.get(username) || "") : "";
+      const qs = new URLSearchParams();
+            qs.set("window", String(miniWindowSec)); // default popout window (we'll add UI selector next)
+      if (saved) qs.set("worker", saved);
+      window.open(`/chart/miner/${encodeURIComponent(username)}?` + qs.toString(), `_chart_${username}`, "width=1100,height=650");
+    }
+
+    // Pop out: all workers (single window grid; avoids popup blockers)
+    function popMiniAll(username){
+      const qs = new URLSearchParams();
+            qs.set("window", String(miniWindowSec));
+      window.open(`/chart/miner/${encodeURIComponent(username)}/all?` + qs.toString(), `_chart_all_${username}`, "width=1300,height=800");
+    }
+
+function toggleWorkers(username){
       if (openWorkers.has(username)) openWorkers.delete(username);
       else openWorkers.add(username);
       if (lastSnap) render(lastSnap);
@@ -1252,8 +1501,13 @@ font-size: 12px;
 
     // Default view: top 10 miners by hashrate (snapshot is already sorted)
     if (!q) {
-      miners = miners.slice(0, 10);
-    } else {
+      const top = miners.slice(0, 10);
+      const keep = new Set([...expandedMiners, ...openWorkers, ...openCharts]);
+      const extra = miners.filter(m => keep.has(m.username));
+      const seen = new Set();
+      miners = [];
+      top.forEach(m => { if (!seen.has(m.username)) { miners.push(m); seen.add(m.username); } });
+      extra.forEach(m => { if (!seen.has(m.username)) { miners.push(m); seen.add(m.username); } });} else {
       miners = miners.filter(m => {
         if ((m.username || "").toLowerCase().includes(q)) return true;
         return (m.workers_list || []).some(w => (w.name || "").toLowerCase().includes(q));
@@ -1310,8 +1564,20 @@ font-size: 12px;
       const isOpen = expandedMiners.has(m.username);
       const chev = isOpen ? "▾" : "▸";
 
-      // collapsed view: just name + status
-      // expanded view: show the full tiles + workers toggle
+      // build worker options for the chart selector
+      const prefix = (m.username || "") + ".";
+      const workerOpts = workers
+        .map(w => {
+          const full = (w.name || "");
+          const short = full.startsWith(prefix) ? full.slice(prefix.length) : full;
+          const label = (short || full || "worker");
+          return { full, label };
+        })
+        .sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: "base" }))
+        .map(o => `<option value="${escAttr2(o.full)}">${escAttr2(o.label)}</option>`)
+        .join("");
+      const chartOpen = openCharts.has(m.username);
+
       return `
         <div class="mcard">
           <div class="minerHead" onclick="toggleMiner('${escAttr(m.username)}')">
@@ -1331,19 +1597,72 @@ font-size: 12px;
                 <div class="kv"><div class="k">Best share</div><div class="v mono">${m.bestshare ? Math.floor(m.bestshare).toString() : "—"}</div></div>
               </div>
 
-              ${workers.length ? `
-                <div style="margin-top:10px;">
+              <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
+                <button class="chartToggle" type="button" onclick="event.stopPropagation(); toggleChart('${escAttr(m.username)}')">
+                  <span class="workerChevron">${chartOpen ? "▾" : "▸"}</span>
+                  Chart
+                </button>
+
+                ${workers.length ? `
                   <button class="workerToggle" type="button" onclick="event.stopPropagation(); toggleWorkers('${escAttr(m.username)}')">
                     <span class="workerChevron">${openWorkers.has(m.username) ? "▾" : "▸"}</span>
                     Workers <span class="mono">${onlineWorkers}/${m.workers ?? workers.length}</span>
                   </button>
-                  ${openWorkers.has(m.username) ? workerPanelHTML(m.username, workers) : ""}
+                ` : ``}
+              </div>
+
+              ${chartOpen ? `
+                <div class="miniChartWrap" data-miner="${escAttr2(m.username)}">
+                  <div class="miniChartHead">
+                    <div class="miniHint">Hashrate</div>
+                    <div class="miniActions">
+                      <button class="miniPop" type="button" title="Pop out this chart" onclick="event.stopPropagation(); popMiniCurrent('${escAttr(m.username)}')">↗</button>
+                      <button class="miniPop" type="button" title="Pop out all workers" onclick="event.stopPropagation(); popMiniAll('${escAttr(m.username)}')">▦</button>
+                    </div>
+                    <select id="miniSel-${escAttr2(m.username)}" class="miniSelect" onclick="event.stopPropagation()" onchange="event.stopPropagation(); loadMiniMinerChart(this)">
+                      <option value="">Total</option>
+                      ${workerOpts}
+                    </select>
+                    <select class="miniRange" onclick="event.stopPropagation()" onchange="event.stopPropagation(); setMiniRange(this.value); if(lastSnap) render(lastSnap);">
+                      <option value="3600">1h</option>
+                      <option value="21600">6h</option>
+                      <option value="86400">24h</option>
+                      <option value="604800">7d</option>
+                      <option value="2592000">30d</option>
+                      <option value="31536000">1y</option>
+                    </select>
+                  </div>
+                  <div class="miniChart" id="mini-${m.username}"></div>
                 </div>
-              ` : ``}</div>
+              ` : ``}
+
+              ${openWorkers.has(m.username) ? workerPanelHTML(m.username, workers) : ""}
+            </div>
           ` : ``}
         </div>
       `;
     }).join("");
+
+    // after DOM update: render any open mini charts (restore selection + smooth paint)
+    miners.forEach(m => {
+      if (!openCharts.has(m.username)) return;
+
+      // Locate the select via wrapper (ids may be escaped)
+      const wrap = document.querySelector(`.miniChartWrap[data-miner="${CSS.escape(m.username)}"]`);
+      const sel = wrap ? wrap.querySelector("select.miniSelect") : null;
+      const rsel = wrap ? wrap.querySelector("select.miniRange") : null;
+      if (rsel) rsel.value = String(miniWindowSec);
+
+
+      const saved = (typeof miniSelState !== "undefined" && miniSelState.has(m.username))
+        ? (miniSelState.get(m.username) || "")
+        : "";
+
+      if (sel && sel.value !== saved) sel.value = saved;
+
+      // paint next frame to reduce “flash” after DOM rebuild
+      requestAnimationFrame(() => renderMiniMinerChart(m.username, saved));
+    });
 }
 
   async function refresh(){
