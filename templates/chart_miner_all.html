@@ -24,7 +24,7 @@
     .grid{
       flex:1;
       display:grid;
-      grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
       gap:12px;
       align-content:start;
       overflow:auto;
@@ -40,7 +40,11 @@
       background:rgba(255,255,255,.02);
       min-height:260px;
     }
-    .hdr{display:flex; gap:10px; align-items:center; flex-wrap:wrap;}
+    .hdr{display:flex; gap:10px; align-items:center; flex-wrap:nowrap;}
+    .name{flex:1; min-width:0; font-weight:900; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+    .rate{ font-weight:800; font-variant-numeric: tabular-nums; }
+    .close{ width:28px; height:28px; line-height:26px; padding:0; border-radius:10px; cursor:pointer; }
+    .close:hover{ border-color:rgba(255,255,255,.35); }
     .name{font-weight:900; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:100%;}
     .sub{color:var(--muted); font-size:12px;}
     .chart{flex:1; min-height:220px;}
@@ -72,6 +76,10 @@
     #range:focus{ box-shadow:0 0 0 2px rgba(106,166,255,.20); border-color:var(--accent); }
     #range option{ background: var(--bg); color: var(--fg); }
 
+  
+    @media (max-width: 720px){
+      .grid{ grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 <body>
@@ -203,10 +211,9 @@
       return `
         <div class="card" data-key="${k}">
           <div class="hdr">
-            <div style="min-width:0">
-              <div class="name">${label}</div>
-              <div class="sub">${k ? k : username}</div>
-            </div>
+            <div class="name">${label}</div>
+            <div class="rate" id="rate_${id}">--</div>
+            <button class="close" type="button" data-close="${k}" title="Hide">×</button>
           </div>
           <div class="chart" id="${id}"></div>
         </div>
@@ -236,6 +243,12 @@
 
         const [t, hs] = await fetchSeries(k);
         lastData.set(k, [t, hs]);
+
+        const rateEl = document.getElementById(`rate_${chartIdForKey(k)}`);
+        if (rateEl){
+          const last = hs.length ? hs[hs.length - 1] : null;
+          rateEl.textContent = (last == null || !isFinite(last)) ? "--" : `${last.toFixed(2)} TH/s`;
+        }
 
         const prev = plots.get(k);
         if (!prev){
