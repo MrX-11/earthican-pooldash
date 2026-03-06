@@ -22,15 +22,16 @@
     }
     label{border:none;padding:0}
     .grid{
+      grid-auto-flow: dense;
       flex:1;
       display:grid;
-      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+grid-auto-rows: minmax(260px, 420px);
       gap:12px;
-      align-content:start;
-      overflow:auto;
-      padding-bottom:6px;
+      align-content:start;      padding-bottom:6px;
     }
     .card{
+      min-width:0;
       border:1px solid var(--border);
       border-radius:14px;
       padding:10px;
@@ -38,8 +39,10 @@
       flex-direction:column;
       gap:8px;
       background:rgba(255,255,255,.02);
-      min-height:260px;
-    }
+      height:100%;
+      min-height:260px;    }
+    .card.expanded{ grid-column: span 2; grid-row: span 2; }
+    .hdr{ cursor:pointer; }
     .hdr{display:flex; gap:10px; align-items:center; flex-wrap:nowrap;}
     .name{flex:1; min-width:0; font-weight:900; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
     .rate{ font-weight:800; font-variant-numeric: tabular-nums; }
@@ -77,9 +80,9 @@
     #range option{ background: var(--bg); color: var(--fg); }
 
   
-    @media (max-width: 720px){
-      .grid{ grid-template-columns: 1fr; }
-    }
+    @media (max-width: 1200px){ .grid{ grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+    @media (max-width: 900px){ .grid{ grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 720px){ .grid{ grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
@@ -118,7 +121,42 @@
   const plots = new Map();    // key -> uPlot
   const lastData = new Map(); // key -> [t, ths]
 
+  const chartRO = new ResizeObserver((entries) => {
+    for (const ent of entries){
+      const el = ent.target;
+      const card = el.closest('.card');
+      const k = card ? (card.dataset.key || '') : '';
+      const u = plots.get(k);
+      if (!u) continue;
+      u.setSize({ width: el.clientWidth, height: el.clientHeight });
+    }
+  });
+
+
+  // per-tab state
+  const HIDDEN_KEY = `earthican.gridHidden:${username}`;
+  const EXP_KEY = `earthican.gridExpanded:${username}`;
+  const hiddenKeys = new Set(JSON.parse(sessionStorage.getItem(HIDDEN_KEY) || '[]'));
+  const expandedKeys = new Set(JSON.parse(sessionStorage.getItem(EXP_KEY) || '[]'));
+  const saveState = () => {
+    sessionStorage.setItem(HIDDEN_KEY, JSON.stringify([...hiddenKeys]));
+    sessionStorage.setItem(EXP_KEY, JSON.stringify([...expandedKeys]));
+  };
+
+
   function toTHS(hs){ const v=Number(hs); return isFinite(v)?(v/1e12):0; }
+
+  function fmtRateTHS(ths){
+    const v = Number(ths);
+    if (!isFinite(v)) return "--";
+    // v is TH/s
+    if (v >= 1000) return `${(v/1000).toFixed(2)} PH/s`;
+    if (v >= 1)    return `${v.toFixed(2)} TH/s`;
+    if (v >= 1e-3) return `${(v*1000).toFixed(2)} GH/s`;
+    if (v >= 1e-6) return `${(v*1e6).toFixed(2)} MH/s`;
+    if (v >= 1e-9) return `${(v*1e9).toFixed(2)} kH/s`;
+    return `${(v*1e12).toFixed(2)} H/s`;
+  }
 
   function shortName(full){
     const pref = username + ".";
@@ -209,7 +247,7 @@
       const label = (k === "") ? "Total" : shortName(k);
       const id = chartIdForKey(k);
       return `
-        <div class="card" data-key="${k}">
+        <div class="card${expandedKeys.has(k) ? " expanded" : ""}" data-key="${k}">
           <div class="hdr">
             <div class="name">${label}</div>
             <div class="rate" id="rate_${id}">--</div>
@@ -221,7 +259,45 @@
     }).join("");
   }
 
-  async function refreshAll(){
+  // Grid interactions: close + expand
+  grid.addEventListener("click", (e) => {
+    const closeBtn = e.target.closest("button.close");
+    if (closeBtn){
+      const card = closeBtn.closest(".card");
+      const k = card?.dataset?.key ?? "";
+      hiddenKeys.add(k);
+      // destroy plot + remove card
+      const u = plots.get(k);
+      if (u) { try{ u.destroy(); } catch(e){} }
+      plots.delete(k);
+      lastData.delete(k);
+      card?.remove();
+      saveState();
+      e.stopPropagation();
+      return;
+    }
+
+    const hdr = e.target.closest(".hdr");
+    if (hdr){
+      const card = hdr.closest(".card");
+      const k = card?.dataset?.key ?? "";
+      if (!k && k !== "") return; // defensive
+      if (expandedKeys.has(k)) expandedKeys.delete(k);
+      else expandedKeys.add(k);
+      saveState();
+      card?.classList.toggle("expanded");
+      // resize plots after layout settles
+      requestAnimationFrame(() => {
+        for (const [kk,u] of plots.entries()){
+          const el = chartElForKey(kk);
+          if (!el) continue;
+          u.setSize({ width: el.clientWidth, height: el.clientHeight });
+        }
+      });
+    }
+  });
+
+  async function refreshAll(forceRebuild=false){
     try{
       const snap = await fetchSnapshot();
       const miner = (snap.miners||[]).find(m => (m.username||"") === username);
@@ -230,14 +306,16 @@
       let keys = workers.map(w => (w.name||"")).filter(Boolean);
       keys = keys.sort((a,b) => shortName(a).localeCompare(shortName(b), undefined, {sensitivity:"base"}));
       keys = ["", ...keys];
+      const visibleKeys = keys.filter(k => !hiddenKeys.has(k));
 
-      if (grid.children.length !== keys.length){
+      if (forceRebuild || grid.children.length !== visibleKeys.length){
         plots.forEach(u => { try{u.destroy();}catch(e){} });
         plots.clear();
-        buildCards(keys);
+        buildCards(visibleKeys);
+        grid.querySelectorAll('.chart').forEach(el => chartRO.observe(el));
       }
 
-      for (const k of keys){
+      for (const k of visibleKeys){
         const el = chartElForKey(k);
         if (!el) continue;
 
@@ -247,7 +325,7 @@
         const rateEl = document.getElementById(`rate_${chartIdForKey(k)}`);
         if (rateEl){
           const last = hs.length ? hs[hs.length - 1] : null;
-          rateEl.textContent = (last == null || !isFinite(last)) ? "--" : `${last.toFixed(2)} TH/s`;
+          rateEl.textContent = (last == null || !isFinite(last)) ? "--" : fmtRateTHS(last);
         }
 
         const prev = plots.get(k);
@@ -267,9 +345,13 @@
     windowSec = Number(rangeSel.value||21600);
     refreshAll();
   });
-  btnRefresh?.addEventListener("click", () => refreshAll());
-
-  let rt=null;
+  btnRefresh?.addEventListener("click", () => {
+    hiddenKeys.clear();
+    expandedKeys.clear();
+    saveState();
+    refreshAll(true);
+  });
+let rt=null;
   window.addEventListener("resize", () => {
     clearTimeout(rt);
     rt=setTimeout(() => {

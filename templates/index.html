@@ -1315,7 +1315,11 @@ font-size: 12px;
     // --- MINI MINER CHARTS (mobile) ---
     const miniPlots = new Map(); // username -> uPlot instance
 
-    const miniSelState = new Map(); // username -> selected workerFull (\"\" = Total)
+    const miniSelState = new Map();
+
+    // Avoid mini chart flicker: do not rebuild mobile miner DOM unless membership/state changed
+    let lastMobileSig = "";
+ // username -> selected workerFull (\"\" = Total)
 
     // Mini chart range (seconds). Persist across refresh.
     const MINI_RANGE_KEY = "earthican.miniRangeSec";
@@ -1404,10 +1408,10 @@ let url = `/api/miner_history/${encodeURIComponent(username)}?window=${windowSec
 
       const prev0 = miniPlots.get(username);
 
-// If the miners list re-rendered, the DOM node is new; rebind uPlot
+// If the miners list re-rendered, the DOM node is new; rebind uPlot WITHOUT destroying (prevents jitter)
 if (prev0 && prev0.root !== container) {
-  try { prev0.destroy(); } catch(e){}
-  miniPlots.delete(username);
+  // move uPlot's root into the new container and force a resize
+  container.replaceChildren(prev0.root);
 }
 
 const prev = miniPlots.get(username);
@@ -1556,6 +1560,19 @@ function toggleWorkers(username){
 // Mobile cards
     
     // Mobile cards (collapsible)
+    const mobileUsersSig = miners.map(m => m.username).slice().sort().join('|');
+    const mobileSig = [
+      q,
+      String(miniWindowSec),
+      mobileUsersSig,
+      [...expandedMiners].slice().sort().join(','),
+      [...openWorkers].slice().sort().join(','),
+      [...openCharts].slice().sort().join(',')
+    ].join('||');
+
+    const rebuildMobile = (mobileSig !== lastMobileSig);
+    if (rebuildMobile) {
+      lastMobileSig = mobileSig;
     els.mobileList.innerHTML = miners.map(m => {
       const workers = m.workers_list || [];
       const minerOnline = isOnlineFromLastshare(m.lastshare);
@@ -1642,6 +1659,8 @@ function toggleWorkers(username){
         </div>
       `;
     }).join("");
+
+    }
 
     // after DOM update: render any open mini charts (restore selection + smooth paint)
     miners.forEach(m => {
